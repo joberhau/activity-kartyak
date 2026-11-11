@@ -544,6 +544,41 @@
     applause(7, .2);
     setTimeout(() => { if (S.sound) applause(3, .16); }, 3500);
   }
+  /* Szomorú hangok, ha senki nem találta ki: lehangolt harsona, "ohh nooo" és lecsúszó hang */
+  let lastSad = -1;
+  function trombone(f, t, d, slideTo, vib) {
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(f, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + d);
+    fl.type = "lowpass"; fl.frequency.setValueAtTime(500, t); fl.frequency.linearRampToValueAtTime(1100, t + .08); fl.frequency.linearRampToValueAtTime(700, t + d);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.2, t + .04); g.gain.setValueAtTime(.2, t + d * .8); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 5.5; lg.gain.value = f * .02; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + d + .05); }
+    o.connect(fl); fl.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d + .05);
+  }
+  function groan(f0, f1, t, d, vol) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .25); g.gain.setValueAtTime(vol, t + d * .6); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    [[480, 1], [850, .6]].forEach(([fr, gain]) => { const b = ac.createBiquadFilter(), bg = ac.createGain(); b.type = "bandpass"; b.frequency.value = fr; b.Q.value = 4; bg.gain.value = gain; o.connect(b); b.connect(bg); bg.connect(g); });
+    g.connect(ac.destination); o.start(t); o.stop(t + d + .05);
+  }
+  function sadSound() {
+    if (!S.sound || !ac) return;
+    let v; do { v = Math.floor(Math.random() * 3); } while (v === lastSad); lastSad = v;
+    const t = ac.currentTime + .03;
+    if (v === 0) { // lehangolt harsona: wah-wah-wah-waaah
+      trombone(233, t, .38); trombone(220, t + .45, .38); trombone(208, t + .9, .38); trombone(196, t + 1.35, 1.3, 170, true);
+    } else if (v === 1) { // közönség: "óóóh, neeem"
+      [[190, 120], [225, 140], [270, 165]].forEach(([a, b], i) => groan(a, b, t + i * .05, 1.7, .09));
+      puff(t, .2, "bandpass", 700, .6, 1.5);
+      setTimeout(() => { if (S.sound) { const u = ac.currentTime; [[170, 95], [210, 120]].forEach(([a, b]) => groan(a, b, u, 1.3, .08)); } }, 1500);
+    } else { // lecsúszó hang
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(700, t); o.frequency.exponentialRampToValueAtTime(70, t + 1.2);
+      g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t + 1.3);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 1.4);
+      trombone(110, t + 1.25, .6, 80); puff(t + 1.25, .3, "lowpass", 400, .7, .12);
+    }
+  }
   function buzz(p) { if (S.sound) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} } }
 
   /* Konfetti */
@@ -672,7 +707,8 @@
   }
   function timeUp() {
     phase = "over"; timeLeft = 0;
-    beep(200, .7, "sawtooth", .2); buzz([250, 100, 250]);
+    if (stealing) sadSound(); else beep(200, .7, "sawtooth", .2);
+    buzz([250, 100, 250]);
     toast(stealing ? "Lejárt az idő!" : "Lejárt az idő! A többiek még tippelhetnek.");
     const st = $("stage"); st.classList.remove("shake"); void st.offsetWidth; st.classList.add("shake");
     render();
