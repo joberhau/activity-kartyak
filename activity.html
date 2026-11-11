@@ -271,7 +271,7 @@
 <div class="toast" id="toast" role="status"></div>
 <div class="veil" id="veil"></div>
 <section class="sheet" id="sheet" aria-label="Csapat kiválasztása">
-  <h2>Melyik csapat találta ki?</h2>
+  <h2 id="sheetTitle">Melyik csapat találta ki?</h2>
   <div class="picks" id="picks"></div>
   <button class="cancel" id="cancel">Mégsem</button>
 </section>
@@ -644,12 +644,29 @@
   function openSheet() {
     if (!cur) return;
     const prevPhase = phase; stopTimer();
+    $("sheetTitle").textContent = "Melyik csapat találta ki?";
     $("picks").textContent = "";
     for (let i = 0; i < S.teamCount; i++) {
       const b = document.createElement("button"); b.className = "pick"; b.style.setProperty("--tc", TEAM_COLORS[i]);
       const n = document.createElement("span"); n.textContent = S.names[i];
       const p = document.createElement("i"); p.textContent = "+" + PTS[cur.lv];
       b.append(n, p); b.addEventListener("click", () => award(i)); $("picks").appendChild(b);
+    }
+    veil.classList.add("open"); sheet.classList.add("open");
+    sheet.dataset.prev = prevPhase;
+  }
+  function openPassSheet() {
+    if (!cur) return;
+    const prevPhase = phase; stopTimer();
+    $("sheetTitle").textContent = "Ki folytatja?";
+    $("picks").textContent = "";
+    for (let i = 0; i < S.teamCount; i++) {
+      const b = document.createElement("button"); b.className = "pick"; b.style.setProperty("--tc", TEAM_COLORS[i]);
+      const n = document.createElement("span"); n.textContent = S.names[i];
+      const p = document.createElement("i"); p.textContent = i === S.turn ? "marad" : "átveszi";
+      b.append(n, p);
+      b.addEventListener("click", () => { closeSheet(); S.turn = i; save(); syncCat(); renderBoard(); renderChips(); leave(() => drawCard()); });
+      $("picks").appendChild(b);
     }
     veil.classList.add("open"); sheet.classList.add("open");
     sheet.dataset.prev = prevPhase;
@@ -800,6 +817,7 @@
       if (S.mode === "board") leave(() => advanceTurn()); else skip();
       return;
     }
+    if (S.mode === "board" && (phase === "live" || phase === "ready")) { openPassSheet(); return; }
     skip();
   });
   $("back").addEventListener("click", () => { if (phase === "idle") drawCard(); else if (phase === "down") reveal(); });
