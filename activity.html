@@ -1,389 +1,861 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14112a">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Activity Kártyák</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@500;700&display=swap">
 <style>
-  /* Layout: one thumb-reachable column. Card in the middle, actions and scores under it. */
   :root {
-    --bg: #eceef3;
-    --surface: #ffffff;
-    --fg: #171a22;
-    --muted: #5a6275;
-    --line: #d3d7e0;
-    --draw: #d6336c;
-    --talk: #2563eb;
-    --mime: #0f9d76;
-    --back: #2b3042;
-    --font-display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
-    --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #11131a; --surface: #1b1e29; --fg: #eef0f6; --muted: #a0a8bb; --line: #323749;
-      --draw: #e8527f; --talk: #5b8cff; --mime: #2dc596; --back: #2b3042;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #11131a; --surface: #1b1e29; --fg: #eef0f6; --muted: #a0a8bb; --line: #323749;
-    --draw: #e8527f; --talk: #5b8cff; --mime: #2dc596; --back: #2b3042;
+    --bg: #14112a; --ink: #f4f2ff; --muted: #a9a4cc; --line: rgba(255,255,255,.14); --glass: rgba(255,255,255,.08);
+    --draw: #ff8a1f; --draw2: #c95a00;
+    --talk: #2fa8f0; --talk2: #0f6fb5;
+    --mime: #ffd23f; --mime2: #d9a400; --danger: #ff4d5e;
+    --gold: #ffc83d;
+    --display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+    --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: dark;
   }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 500 16px/1.35 var(--body); overflow: hidden;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 
-  html, body { height: 100%; }
-  body {
-    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4;
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-    padding-block: 12px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .app { max-width: 460px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; gap: 14px; }
-  button { font: inherit; color: inherit; cursor: pointer; }
-  button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+  /* Mozgó háttér */
+  .bg { position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+  .bg i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); opacity: .5; will-change: transform; }
+  .bg i:nth-child(1) { background: var(--draw); left: -30vmax; top: -25vmax; animation: drift1 18s ease-in-out infinite alternate; }
+  .bg i:nth-child(2) { background: var(--talk); right: -35vmax; top: 10vmax; animation: drift2 22s ease-in-out infinite alternate; }
+  .bg i:nth-child(3) { background: var(--mime); left: -10vmax; bottom: -40vmax; animation: drift3 26s ease-in-out infinite alternate; }
+  .bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 0, var(--bg) 85%); opacity: .75; }
+  @keyframes drift1 { to { transform: translate(35vmax, 25vmax) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(-30vmax, 20vmax) scale(.9); } }
+  @keyframes drift3 { to { transform: translate(30vmax, -25vmax) scale(1.2); } }
 
-  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .top h1 { font: 800 1.35rem/1 var(--font-display); margin: 0; letter-spacing: -.01em; }
-  .left { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .app { position: relative; z-index: 1; height: 100dvh; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;
+    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+
+  .top { display: flex; align-items: center; gap: 10px; }
+  .top h1 { font: 800 1.6rem/1 var(--display); margin: 0; letter-spacing: -.02em; flex: 1;
+    background: linear-gradient(90deg, var(--draw), var(--mime), var(--talk)); -webkit-background-clip: text; background-clip: text; color: transparent;
+    background-size: 200% 100%; animation: shimmer 6s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .left { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); display: grid; place-items: center; }
+  .icon-btn.armed { background: var(--gold); color: #2a1a00; border-color: transparent; }
+  .left { white-space: nowrap; }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  .board { display: flex; gap: 8px; cursor: pointer; }
+  .team { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line);
+    border-bottom: 3px solid var(--tc); display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+  .team.turn { border-color: var(--tc); box-shadow: 0 0 0 2px var(--tc), 0 0 22px -4px var(--tc); animation: glow 1.8s ease-in-out infinite; }
+  .team.turn span { color: var(--ink); }
+  @keyframes glow { 50% { box-shadow: 0 0 0 2px var(--tc), 0 0 30px 0 var(--tc); } }
+  .chip.locked[aria-pressed="false"] { opacity: .35; }
+  .team-add { flex: 0 0 48px; border-radius: 14px; border: 2px dashed var(--line); color: var(--muted); font: 800 1.6rem/1 var(--display); }
+  .team-add:active { transform: scale(.94); }
+  .team span { font-size: .78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team b { font: 800 1.5rem/1 var(--display); font-variant-numeric: tabular-nums; display: inline-block; }
+  .team b.bump { animation: bump .6s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.7); color: var(--gold); } 100% { transform: scale(1); } }
 
   .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .chip { min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface);
-    font-weight: 700; font-size: .9rem; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 6px; }
+  .chip { min-height: 46px; border-radius: 14px; border: 2px solid var(--line); background: var(--glass); font-weight: 700; font-size: .88rem;
+    display: flex; align-items: center; justify-content: center; gap: 6px; transition: transform .15s, background .2s, border-color .2s; }
   .chip svg { width: 18px; height: 18px; flex: none; }
-  .chip[aria-pressed="true"] { border-color: var(--c); color: var(--c); }
+  .chip:active { transform: scale(.95); }
+  .chip[aria-pressed="true"] { background: var(--c); border-color: transparent; color: var(--on, #fff); box-shadow: 0 6px 18px -6px var(--c); }
   .chip[aria-pressed="false"] { color: var(--muted); }
-  .k-draw { --c: var(--draw); } .k-talk { --c: var(--talk); } .k-mime { --c: var(--mime); }
+  .k-draw { --c: var(--draw); --c2: var(--draw2); } .k-talk { --c: var(--talk); --c2: var(--talk2); } .k-mime { --c: var(--mime); --c2: var(--mime2); --on: #2a1a00; }
 
-  .stage { position: relative; flex: 1; min-height: 300px; display: flex; flex-direction: column; }
-  .card { flex: 1; border-radius: 22px; padding: 18px 18px 16px; display: flex; flex-direction: column;
-    background: var(--c, var(--back)); color: #fff; min-height: 300px; position: relative; overflow: hidden; }
-  .card.is-back { background: var(--back); align-items: center; justify-content: center; text-align: center; gap: 10px; }
-  .card.is-back .hint { font: 800 1.8rem/1.1 var(--font-display); }
-  .card.is-back .sub { color: #c4c9d8; font-size: .95rem; max-width: 24ch; }
+  /* Kártya */
+  .stage { flex: 1; min-height: 0; display: grid; place-items: center; perspective: 1100px; }
+  .slot { width: 100%; max-width: 340px; height: 100%; max-height: 470px; }
+  .slot.enter { animation: cardIn .55s cubic-bezier(.2,1.2,.3,1) both; }
+  .slot.exit { animation: cardOut .32s ease-in both; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(70px) rotate(-6deg) scale(.85); } to { opacity: 1; transform: none; } }
+  @keyframes cardOut { to { opacity: 0; transform: translateY(-90px) rotate(8deg) scale(.85); } }
+  .card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .75s cubic-bezier(.3,1.3,.4,1); }
+  .card.flipped { transform: rotateY(180deg); }
+  .front { visibility: hidden; transition: visibility 0s .3s; }
+  .card.flipped .front { visibility: visible; }
+  .card.flipped .back { visibility: hidden; transition: visibility 0s .3s; }
+  .card.noanim .front, .card.noanim .back { transition: none; }
+  .card.noanim { transition: none; }
+  .face { position: absolute; inset: 0; border-radius: 26px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
+    box-shadow: 0 24px 50px -18px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,255,255,.18); }
 
-  .meta { display: flex; align-items: center; justify-content: space-between; }
-  .cat { display: flex; align-items: center; gap: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; }
+  .back { visibility: visible; transition: visibility 0s 0s; background: linear-gradient(145deg, #3a2a8f, #1d1450 60%, #2b1a6b); display: grid; place-items: center; text-align: center; padding: 20px; }
+  .back::before { content: ""; position: absolute; inset: 0; opacity: .22;
+    background: repeating-linear-gradient(45deg, #fff 0 2px, transparent 2px 22px); animation: slide 8s linear infinite; }
+  .back::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; transform: rotate(20deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation: shine 3.6s ease-in-out infinite; }
+  @keyframes slide { to { background-position: 62px 0; } }
+  @keyframes shine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+  .logo { position: relative; z-index: 1; display: grid; gap: 12px; justify-items: center; }
+  .logo .q { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; font: 800 4.2rem/1 var(--display);
+    background: conic-gradient(from 0deg, var(--draw), var(--gold), var(--mime), var(--talk), var(--draw)); color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.25);
+    animation: bob 2.4s ease-in-out infinite, spin 9s linear infinite; }
+  .logo .q span { width: 86px; height: 86px; border-radius: 50%; background: #241862; display: grid; place-items: center; animation: unspin 9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes unspin { to { transform: rotate(-360deg); } }
+  .logo .q { animation: spin 9s linear infinite; }
+  .logo .t { font: 800 1.9rem/1.05 var(--display); }
+  .logo .s { color: #cfc9f5; font-size: .95rem; max-width: 22ch; }
+  .logo .pulse { animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .front { transform: rotateY(180deg); background: linear-gradient(160deg, var(--c), var(--c2)); color: var(--on, #fff); padding: 18px; display: flex; flex-direction: column; }
+  .front .wm { position: absolute; right: -12%; bottom: -8%; width: 78%; opacity: .13; animation: floaty 7s ease-in-out infinite; pointer-events: none; }
+  .front .wm svg { width: 100%; height: auto; display: block; stroke-width: 1.4; }
+  @keyframes floaty { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-14px) rotate(6deg); } }
+  .meta { display: flex; align-items: center; justify-content: space-between; position: relative; }
+  .cat { display: flex; align-items: center; gap: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; font-size: .85rem; }
   .cat svg { width: 22px; height: 22px; }
-  .pts { font: 800 2.4rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
-  .word-wrap { flex: 1; display: grid; place-items: center; text-align: center; padding: 8px 0; }
-  .word { font: 800 clamp(2.1rem, 12vw, 3.6rem)/1.05 var(--font-display); letter-spacing: -.015em;
-    text-wrap: balance; overflow-wrap: anywhere; hyphens: auto; }
-  .word.is-hidden { opacity: .0; }
-  .covered { position: absolute; inset: 0; display: grid; place-items: center; background: var(--c); border: 0; width: 100%;
-    color: #fff; font: 800 1.5rem/1.1 var(--font-display); text-align: center; padding: 20px; }
+  .pts { font: 800 2.3rem/1 var(--display); background: rgba(255,255,255,.2); border-radius: 14px; padding: 4px 12px; font-variant-numeric: tabular-nums; }
+  .word-wrap { flex: 1; display: grid; place-items: center; text-align: center; position: relative; padding: 6px 0; }
+  .word { font: 800 3.2rem/1.04 var(--display); letter-spacing: -.015em; text-wrap: balance; overflow-wrap: anywhere; hyphens: auto; text-shadow: 0 3px 0 rgba(0,0,0,.18); }
+  .rule { position: relative; font-size: .85rem; color: inherit; text-align: center; background: rgba(0,0,0,.18); border-radius: 12px; padding: 8px 10px; }
+  .foot { position: relative; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; }
   .dots { display: flex; gap: 6px; }
-  .dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; }
-  .dots i.on { background: #fff; }
-  .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; }
+  .dots i.on { background: currentColor; }
 
-  .timer { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 10px; }
-  .timer > b { display: block; height: 100%; width: 100%; background: var(--fg); transform-origin: left; }
-  .timer-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted);
-    font-size: .9rem; font-variant-numeric: tabular-nums; margin-top: 6px; min-height: 28px; }
-  .timer-row .secs { font: 800 1.3rem/1 var(--font-display); color: var(--fg); }
-  .timer-row.is-low .secs { color: var(--draw); }
+  /* Idő */
+  .timer { min-height: 40px; display: flex; align-items: center; gap: 12px; }
+  .track { flex: 1; height: 10px; border-radius: 6px; background: var(--glass); overflow: hidden; border: 1px solid var(--line); }
+  .track b { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--talk), var(--mime)); transform-origin: left; transition: transform .25s linear, background .3s; border-radius: 6px; }
+  .secs { font: 800 1.9rem/1 var(--display); min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .timer.low .track b { background: linear-gradient(90deg, var(--danger), #ff7a59); }
+  .timer.low .secs { color: var(--danger); animation: tickpulse 1s ease-in-out infinite; }
+  .timer.over .secs { color: var(--danger); }
+  .tlabel { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--talk); }
+  .timer.steal .secs { color: var(--talk); }
+  @keyframes tickpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+  .stage.shake .slot { animation: shake .5s; }
+  @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-10px) rotate(-2deg); } 40% { transform: translateX(10px) rotate(2deg); } 60% { transform: translateX(-8px); } 80% { transform: translateX(8px); } }
 
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .btn { min-height: 52px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); font-weight: 700; }
-  .btn.primary { grid-column: 1 / -1; background: var(--fg); color: var(--bg); border-color: var(--fg); min-height: 58px;
-    font: 800 1.15rem/1 var(--font-display); }
-  .btn:disabled { opacity: .45; cursor: default; }
+  .bar { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
+  .btn { min-height: 58px; border-radius: 18px; font: 800 1.05rem/1.1 var(--display); background: var(--glass); border: 1px solid var(--line); padding: 0 12px;
+    transition: transform .12s; }
+  .btn:active { transform: scale(.96); }
+  .btn.main { background: linear-gradient(135deg, var(--gold), #ff9d2e); color: #2a1a00; border: 0; box-shadow: 0 10px 24px -10px var(--gold); }
+  .btn.main.go { background: linear-gradient(135deg, #19c58b, #0fa874); color: #04221a; box-shadow: 0 10px 24px -10px #19c58b; }
+  .btn[hidden] { display: none; }
+  .bar.solo { grid-template-columns: 1fr; }
+  .btn.main.attn { animation: attn 1.6s ease-in-out infinite; }
+  @keyframes attn { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 
-  .scores { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-  .scores h2 { font: 700 .8rem/1 var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; }
-  .teams { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .team { min-height: 64px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); padding: 8px 10px; text-align: left;
-    display: flex; flex-direction: column; gap: 2px; }
-  .team .n { color: var(--muted); font-size: .8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .team .s { font: 800 1.7rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
-  .team.can-award { border-color: var(--fg); }
-  .tools { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tools button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; font-size: .88rem; font-weight: 600; color: var(--muted); }
-  .toast { min-height: 20px; color: var(--muted); font-size: .85rem; }
+  .toast { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translate(-50%, -80px); z-index: 20; background: #fff; color: #1b1740;
+    font-weight: 700; padding: 10px 16px; border-radius: 999px; transition: transform .35s cubic-bezier(.2,1.4,.4,1); max-width: 90vw; text-align: center; }
+  .toast.show { transform: translate(-50%, 0); }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .card { transition: background-color .2s; }
-    .timer > b { transition: transform .25s linear; }
+  /* Csapatválasztó */
+  .veil { position: fixed; inset: 0; background: rgba(8,6,24,.6); z-index: 10; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .veil.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; max-width: 480px; margin: 0 auto; background: #231d4d; border-radius: 26px 26px 0 0;
+    padding: 18px 16px max(18px, env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .35s cubic-bezier(.2,1,.3,1); border: 1px solid var(--line); }
+  .sheet.open { transform: none; }
+  .sheet h2 { font: 800 1.3rem/1.1 var(--display); margin: 0 0 14px; text-align: center; }
+  .picks { display: grid; gap: 10px; }
+  .pick { min-height: 60px; border-radius: 18px; background: var(--tc); color: #1b1200; font: 800 1.15rem/1 var(--display); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+  .pick:active { transform: scale(.97); }
+  .pick i { font-style: normal; background: rgba(0,0,0,.2); border-radius: 10px; padding: 4px 10px; }
+  .cancel { width: 100%; margin-top: 10px; min-height: 48px; color: var(--muted); font-weight: 700; }
+
+  /* Beállítások */
+  dialog { border: 1px solid var(--line); border-radius: 24px; background: #231d4d; color: var(--ink); width: min(92vw, 440px); max-height: 88dvh; padding: 0; }
+  dialog::backdrop { background: rgba(8,6,24,.7); }
+  .dlg { padding: 18px; display: grid; gap: 16px; }
+  .dlg h2 { font: 800 1.35rem/1 var(--display); margin: 0; }
+  .field { display: grid; gap: 8px; }
+  .field > label, .field > .lab { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+  .seg button { min-height: 44px; border-radius: 12px; border: 2px solid var(--line); font-weight: 700; background: var(--glass); }
+  .seg button[aria-pressed="true"] { background: var(--gold); color: #2a1a00; border-color: transparent; }
+  .names { display: grid; gap: 8px; }
+  .names input { font: inherit; min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: rgba(0,0,0,.25); color: var(--ink); padding: 0 12px; width: 100%; user-select: text; -webkit-user-select: text; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .small { min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass); font-weight: 700; font-size: .9rem; }
+  .done { min-height: 52px; border-radius: 16px; background: var(--gold); color: #2a1a00; font: 800 1.05rem/1 var(--display); }
+
+  /* Játéktábla: az eredeti Activity táblája, állítva: rajt fent, cél lent, 2 soronként váltakozó szín */
+  .boardview { position: fixed; inset: 0; z-index: 12; background: rgba(20,17,42,.97); opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .3s, transform .3s; }
+  .boardview.open { opacity: 1; pointer-events: auto; transform: none; }
+  .bvin { max-width: 480px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;
+    padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  .bvhead { display: flex; align-items: center; justify-content: space-between; }
+  .bvhead h2 { font: 800 1.5rem/1 var(--display); margin: 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+  .legend span.turn { border-color: var(--tc); }
+  .legend i { width: 14px; height: 14px; border-radius: 50%; background: var(--tc); border: 2px solid #fff; }
+  .trackwrap { flex: 1; min-height: 0; overflow: auto; border-radius: 16px; }
+  .trackbox { position: relative; width: 100%; height: 100%; min-height: 400px; }
+  .cell { position: absolute; padding: 2px; }
+  .cell > div { position: relative; width: 100%; height: 100%; border-radius: 9px; display: grid; place-items: center;
+    background: #1d1842; background: color-mix(in srgb, var(--cc) 16%, #15112e); border-bottom: 3px solid var(--cc); color: var(--cc); font: 800 1.05rem/1 var(--display); }
+  .cell small { position: absolute; left: 6px; top: 3px; font: 700 .58rem/1 var(--body); color: var(--muted); }
+  .cell.start > div { background: linear-gradient(90deg, #1c7a5a, #17b37e); color: #04221a; border: 0; letter-spacing: .3em; font-size: .9rem; }
+  .cell.fin > div { background: repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 22px 22px; border: 0; color: #111; font-size: .9rem; }
+  .cell.fin > div span { background: #fff; padding: 3px 14px; border-radius: 8px; letter-spacing: .3em; }
+  .pawn { position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%); transition: left .17s ease, top .17s ease; z-index: 2; }
+  .pawn b { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--tc); border: 2px solid #fff;
+    color: #1b1200; font: 800 .6rem/1 var(--display); box-shadow: 0 4px 8px rgba(0,0,0,.55); }
+  .pawn.hop b { animation: hop .17s; }
+  @keyframes hop { 50% { transform: translateY(-70%) scale(1.25); } }
+  .bvwin { text-align: center; display: grid; gap: 10px; }
+  .bvwin h3 { font: 800 1.8rem/1.1 var(--display); margin: 0; color: var(--gold); animation: bob 1.6s ease-in-out infinite; }
+  .bvwin[hidden], #bvGo[hidden], .icon-btn[hidden] { display: none; }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
+
+  @media (max-height: 640px) {
+    .word { font-size: 2.6rem; } .btn { min-height: 52px; } .logo .q { width: 84px; height: 84px; font-size: 3.4rem; } .logo .q span { width: 68px; height: 68px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+    .bg i { animation: none !important; }
   }
 </style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <main class="app">
-  <div class="top">
+  <header class="top">
     <h1>Activity</h1>
-    <span class="left" id="left" aria-live="polite"></span>
-  </div>
+    <span class="left" id="left"></span>
+    <button class="icon-btn" id="newBtn" aria-label="Új játék">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1015.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button class="icon-btn" id="boardBtn" aria-label="Tábla">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-2.5 4L18 12H5"/></svg>
+    </button>
+    <button class="icon-btn" id="gear" aria-label="Beállítások">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <section class="board" id="board" aria-label="Pontszám"></section>
 
   <div class="chips" role="group" aria-label="Kategóriák">
-    <button class="chip k-draw" data-k="draw" aria-pressed="true"></button>
-    <button class="chip k-talk" data-k="talk" aria-pressed="true"></button>
-    <button class="chip k-mime" data-k="mime" aria-pressed="true"></button>
+    <button class="chip k-draw" data-k="draw"></button>
+    <button class="chip k-talk" data-k="talk"></button>
+    <button class="chip k-mime" data-k="mime"></button>
   </div>
 
-  <section class="stage" aria-label="Kártya">
-    <div class="card is-back" id="card"></div>
-    <div class="timer" aria-hidden="true"><b id="bar"></b></div>
-    <div class="timer-row" id="timerRow"><span id="timerLabel">60 másodperc</span><span class="secs" id="secs"></span></div>
-  </section>
-
-  <div class="actions">
-    <button class="btn primary" id="draw">Húzok egy kártyát</button>
-    <button class="btn" id="startStop" disabled>Idő indítása</button>
-    <button class="btn" id="peek" disabled>Szó elrejtése</button>
-  </div>
-
-  <section class="scores" aria-label="Pontszám">
-    <h2>Pontszám (koppints arra a csapatra, amelyik kitalálta)</h2>
-    <div class="teams" id="teams"></div>
-    <div class="tools">
-      <button id="undo">Visszavon</button>
-      <button id="addTeam">+ Csapat</button>
-      <button id="delTeam">− Csapat</button>
-      <button id="resetScores">Nulláz</button>
+  <section class="stage" id="stage" aria-label="Kártya">
+    <div class="slot" id="slot">
+      <div class="card" id="card">
+        <div class="face back" id="back"></div>
+        <div class="face front" id="front"></div>
+      </div>
     </div>
-    <div class="toast" id="toast" aria-live="polite"></div>
   </section>
+
+  <div class="timer" id="timer"><span class="tlabel" id="tlabel"></span><div class="track"><b id="fill"></b></div><span class="secs" id="secs"></span></div>
+
+  <nav class="bar solo" id="bar">
+    <button class="btn" id="b1" hidden></button>
+    <button class="btn main" id="b2"></button>
+  </nav>
 </main>
 
+<div class="toast" id="toast" role="status"></div>
+<div class="veil" id="veil"></div>
+<section class="sheet" id="sheet" aria-label="Csapat kiválasztása">
+  <h2>Melyik csapat találta ki?</h2>
+  <div class="picks" id="picks"></div>
+  <button class="cancel" id="cancel">Mégsem</button>
+</section>
+
+<dialog id="settings">
+  <div class="dlg">
+    <h2>Beállítások</h2>
+    <div class="field"><span class="lab">Játékmód</span><div class="seg" id="segMode"></div></div>
+    <div class="field"><span class="lab">Csapatok száma</span><div class="seg" id="segTeams"></div></div>
+    <div class="field"><span class="lab">Csapatnevek</span><div class="names" id="names"></div></div>
+    <div class="field"><span class="lab">Idő egy körre</span><div class="seg" id="segTime"></div></div>
+    <div class="field"><span class="lab">Nehézség</span><div class="seg" id="segLevel"></div></div>
+    <div class="field"><span class="lab">Tábla hossza</span><div class="seg" id="segBoard"></div></div>
+    <div class="field"><span class="lab">Hang és rezgés</span><div class="seg" id="segSound"></div></div>
+    <div class="row2">
+      <button class="small" id="resetDeck">Pakli újrakeverése</button>
+      <button class="small" id="resetScores">Új játék</button>
+    </div>
+    <button class="done" id="closeSettings">Kész</button>
+  </div>
+</dialog>
+
+<section class="boardview" id="bv" aria-label="Játéktábla">
+  <div class="bvin">
+    <div class="bvhead"><h2>Tábla</h2><span class="left" id="bvInfo"></span></div>
+    <div class="legend" id="legend"></div>
+    <div class="trackwrap"><div class="trackbox" id="trackbox"></div></div>
+    <div class="bvwin" id="bvWin" hidden></div>
+    <button class="done" id="bvGo">Tovább</button>
+  </div>
+</section>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+
 <script>
-  // [szó, pont]: 3 könnyű, 6 nehéz
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const svg = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+
   const CATS = {
-    draw: { name: "Rajzolás", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z"/><path d="M14 7l3 3"/></svg>', words: [
-      ["Ház",3],["Fa",3],["Nap",3],["Hal",3],["Virág",3],["Labda",3],
-      ["Hóember",4],["Esernyő",4],["Szivárvány",4],["Autó",4],["Kastély",4],["Gitár",4],
-      ["Hőlégballon",5],["Vízesés",5],["Tengeralattjáró",5],["Fagylalt",5],["Kaktusz",5],["Fogaskerék",5],
-      ["Időgép",6],["Születésnap",6],["Karácsony",6],["Idegen bolygó",6],["Internet",6],["Szabadság",6]
-    ]},
-    talk: { name: "Körülírás", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5z"/><path d="M8 9h8M8 12h5"/></svg>', words: [
-      ["Kutya",3],["Pizza",3],["Iskola",3],["Tengerpart",3],["Szék",3],["Kenyér",3],
-      ["Könyvtár",4],["Hűtőszekrény",4],["Vulkán",4],["Mozi",4],["Biciklis",4],["Szemüveg",4],
-      ["Horgászbot",5],["Pénztárca",5],["Bolhapiac",5],["Műszakváltás",5],["Gyorsétterem",5],["Időjárás",5],
-      ["Lámpaláz",6],["Türelem",6],["Nosztalgia",6],["Nyugdíj",6],["Demokrácia",6],["Kíváncsiság",6]
-    ]},
-    mime: { name: "Mutogatás", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a1.5 1.5 0 013 0v5M12 10V4a1.5 1.5 0 013 0v7M15 10V6a1.5 1.5 0 013 0v8a7 7 0 01-7 7h-1a6 6 0 01-5-3l-2-4a1.5 1.5 0 012.5-1.5L9 15"/></svg>', words: [
-      ["Alvás",3],["Fogmosás",3],["Evés",3],["Zuhanyzás",3],["Telefonálás",3],["Nevetés",3],
-      ["Fodrász",4],["Focista",4],["Fényképezés",4],["Síelés",4],["Horgász",4],["Szobafestő",4],
-      ["Tűzoltó",5],["Vihar a tengeren",5],["Esküvő",5],["Cirkuszi bűvész",5],["Pékség",5],["Autószerelő",5],
-      ["Titanic",6],["Micimackó",6],["Jégvarázs",6],["Harry Potter",6],["A Gyűrűk Ura",6],["Oroszlánkirály",6]
-    ]}
+    draw: { name: "Rajzolás", rule: "Rajzold le! Betűt, számot nem írhatsz, és nem beszélhetsz.",
+      icon: svg('<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z"/><path d="M14 7l3 3"/>') },
+    talk: { name: "Körülírás", rule: "Magyarázd el szavakkal! A szót és a rokonait nem mondhatod ki.",
+      icon: svg('<path d="M4 5h16v11H9l-5 4V5z"/><path d="M8 9h8M8 12h5"/>') },
+    mime: { name: "Mutogatás", rule: "Mutogasd el! Hangot nem adhatsz, szájról olvasni nem lehet.",
+      icon: svg('<path d="M9 11V5a1.5 1.5 0 013 0v5M12 10V4a1.5 1.5 0 013 0v7M15 10V6a1.5 1.5 0 013 0v8a7 7 0 01-7 7h-1a6 6 0 01-5-3l-2-4a1.5 1.5 0 012.5-1.5L9 15"/>') }
   };
-  // További feladatok. Formátum: pont: szó, szó, ... Duplikátumot a betöltés kiszűri.
-  const MORE = {
+  const LEVEL = ["", "könnyű", "közepes", "nehéz"];
+  const PTS = [0, 3, 5, 6];
+
+  // Szavak nehézség szerint (1 könnyű, 2 közepes, 3 nehéz). Mindegyik kitalálható, nincs benne lehetetlen.
+  const WORDS = {
     draw: {
-      3: "Hold, Felhő, Macska, Kutya, Alma, Szív, Csillag, Madár, Cipő, Kulcs, Ajtó, Torta, Ceruza, Béka, Banán, Szem, Kéz, Hegy, Tojás, Kalap",
-      4: "Bicikli, Vonat, Pillangó, Sün, Zongora, Villám, Hajó, Kenguru, Eper, Számítógép, Zsiráf, Mikulás, Tűzoltóautó, Tengeri csillag, Kígyó, Pingvin, Repülő, Kerítés, Gyertya, Olló",
-      5: "Világítótorony, Tűzijáték, Teknős, Óriáskerék, Sakktábla, Pók, Rakéta, Kalóz, Lovag, Dínó, Vihar, Szélmalom, Mérleg, Hegymászó, Sátor, Zsiráf a ködben, Medve a méhkas mellett, Csillagjegy, Hídon átkelő kocsi, Víz alatti város",
-      6: "Barátság, Álom, Hétfő reggel, Egyensúly, Zene, Éjszaka, Hazugság, Határidő, Családi összejövetel, Gondolat, Meglepetés, Emlékezet, Kíváncsiság, Csend, Hazaérkezés"
+      1: "Ház, Fa, Nap, Hold, Felhő, Hal, Macska, Kutya, Alma, Szív, Csillag, Madár, Cipő, Kulcs, Ajtó, Ceruza, Béka, Banán, Szem, Kéz, Hegy, Tojás, Kalap, Virág, Labda, Autó, Esernyő, Szék, Asztal, Óra, Könyv, Pohár, Zokni, Póló, Fog, Orr, Fül, Csiga, Egér, Tyúk, Kacsa, Torta, Fagylalt, Léggömb, Ágy, Lámpa, Létra, Híd, Villa, Kanál, Szemüveg, Gyűrű, Korona, Hajó, Bicikli, Kerék, Sapka, Ajándék, Mosoly, Fogkefe, Tányér, Gomba, Falevél, Tűz, Esőcsepp, Hópehely, Kutyaház, Repülő, Busz, Tehén, Ló, Sün, Nyuszi",
+      2: "Hóember, Szivárvány, Kastély, Gitár, Pillangó, Zongora, Villám, Kenguru, Eper, Számítógép, Zsiráf, Mikulás, Pingvin, Gyertya, Olló, Vonat, Tűzoltóautó, Kerítés, Teknős, Pók, Rakéta, Kalóz, Lovag, Sárkány, Szélmalom, Sátor, Tűzijáték, Világítótorony, Hőlégballon, Vízesés, Kaktusz, Hamburger, Harang, Zászló, Szamár, Elefánt, Oroszlán, Majom, Cápa, Polip, Bálna, Medve, Bagoly, Papagáj, Hinta, Csúszda, Homokvár, Hátizsák, Csizma, Kesztyű, Sál, Traktor, Daru, Mentőautó, Közlekedési lámpa, Távirányító, Televízió, Fényképezőgép, Napszemüveg, Tükör, Lakat, Kalapács, Fűnyíró, Kerti törpe, Strandlabda, Dob, Trombita, Hegedű, Hóangyal, Szán, Tengeri csillag, Szúnyog, Méhecske, Katicabogár, Hangya, Szivacs, Fürdőkád, Kézilabda, Sakkfigura, Karácsonyfa, Pizza, Fagylaltos tölcsér, Esőkabát, Kalózzászló",
+      3: "Óriáskerék, Sakktábla, Tengeralattjáró, Fogaskerék, Hullámvasút, Cirkuszi sátor, Búvár, Űrhajós, Vulkánkitörés, Húsvéti nyuszi, Mérleg, Hegymászó, Bohóc, Szuperhős, Robot, Űrlény, Szélkakas, Kéményseprő, Szellemház, Horgász a tónál, Esős nap, Focimeccs, Alvó macska, Naplemente a tengeren, Hóesés, Családi piknik, Futó kutya, Kalózhajó, Vár a hegyen, Farkas és a hold, Vitorlás vihar, Fagylaltos kocsi, Kutyasétáltatás, Medve a méhkas mellett, Tűzoltó létrával, Lufit eregető gyerek, Kerékpáros az esőben, Sivatagi oázis, Dínó, Mammut, Egyszarvú, Sellő, Boszorkány a seprűn, Tündér, Mikulás szánon, Pizzafutár, Szivárvány az eső után, Hídon átkelő kocsi, Mosógép, Jégkorongozó, Sztetoszkóp, Búvárszemüveg, Gyalogos átkelő"
     },
     talk: {
-      3: "Ágy, Óra, Tej, Busz, Eső, Telefon, Cipő, Fürdőszoba, Torta, Tojás, Hó, Alma, Fogkefe, Szoba, Kalap, Cica, Játszótér, Hintaló, Hajó, Sütő",
-      4: "Repülőtér, Cukrászda, Esőkabát, Zongora, Futball, Mikrohullámú sütő, Ezüst, Hintaszék, Sarkvidék, Elem, Kerékpárút, Műhely, Pékség, Szivacs, Sátor, Virágüzlet, Horgászat, Olvasólámpa, Vonatjegy, Bevásárlókocsi",
-      5: "Határőr, Hullámvasút, Adóbevallás, Jégkorong, Gyorsírás, Kalandpark, Távirányító, Ügyfélszolgálat, Lakatos, Fagyizó, Mérnök, Piactér, Zebra, Jelszó, Mosogatógép, Régiség, Kompromisszum, Szomszédság, Bűvészmutatvány, Nyári szünet",
-      6: "Igazságosság, Szerénység, Pletyka, Előítélet, Mélabú, Ellentmondás, Hűség, Önbizalom, Lemondás, Csalódás, Hála, Szabadidő, Hagyomány, Vágyálom, Hiúság"
+      1: "Kutya, Pizza, Iskola, Szék, Kenyér, Ágy, Óra, Tej, Busz, Eső, Telefon, Fürdőszoba, Torta, Tojás, Hó, Alma, Fogkefe, Játszótér, Cica, Konyha, Bolt, Víz, Tűz, Szappan, Törölköző, Fagylalt, Csokoládé, Kávé, Sajt, Tészta, Leves, Répa, Krumpli, Paradicsom, Tehén, Ló, Elefánt, Hajó, Vonat, Repülő, Bicikli, Kert, Erdő, Tó, Tenger, Nyár, Tél, Reggeli, Vacsora, Ajándék, Játék, Mese, Foci, Esernyő, Szemüveg, Hűtő, Sütő, Ablak, Kulcs, Pénz, Pizzéria, Strand, Tánc, Zene, Kutyaól",
+      2: "Könyvtár, Hűtőszekrény, Vulkán, Mozi, Repülőtér, Cukrászda, Esőkabát, Zongora, Mikrohullámú sütő, Hintaszék, Műhely, Pékség, Szivacs, Sátor, Virágüzlet, Horgászat, Vonatjegy, Bevásárlókocsi, Pénztárca, Bolhapiac, Gyorsétterem, Időjárás, Horgászbot, Kéményseprő, Postás, Tűzoltó, Rendőr, Orvos, Fodrász, Hentes, Gulyás, Lángos, Palacsinta, Dobostorta, Pogácsa, Túró Rudi, Balaton, Duna, Budapest, Lánchíd, Parlament, Kürtőskalács, Tanterem, Tolltartó, Vidámpark, Állatkert, Cirkusz, Akvárium, Múzeum, Színház, Uszoda, Stadion, Kórház, Gyógyszertár, Szálloda, Kemping, Karácsonyfa, Mikulás, Húsvét, Szilveszter, Farsang, Szivárvány, Villámlás, Szánkó, Korcsolya, Benzinkút, Autópálya, Parkoló, Taxi, Villamos, Metró, Mosógép, Porszívó, Hátizsák, Szomszéd, Piac, Tűzijáték, Kollégium, Esküvő, Tankönyv, Lekvár, Zsebkendő, Dugóhúzó, Fagylaltgép",
+      3: "Lámpaláz, Nosztalgia, Türelem, Kíváncsiság, Nyugdíj, Adóbevallás, Ügyfélszolgálat, Kompromisszum, Szomszédság, Jelszó, Hála, Hagyomány, Pletyka, Előítélet, Hűség, Önbizalom, Csalódás, Barátság, Szerelem, Szabadság, Bizalom, Hétfő reggel, Határidő, Sorban állás, Dugó, Albérlet, Lakásfelújítás, Költözés, Home office, Jogosítvány, Felvételi, Vizsgaláz, Hajnali kelés, Álmatlanság, Hőség, Bevásárlólista, Okostelefon, Wi-Fi, Selfie, Közösségi média, Szerencse, Meglepetés, Egyensúly, Kaland, Hazugság, Titok, Boldogság, Féltékenység, Honvágy, Emlék, Álom, Csend, Ünnep, Kirándulás, Nyaralás, Szabadnap, Fizetés, Kölcsön, Garancia, Reklám, Hírek, Szavazás"
     },
     mime: {
-      3: "Sírás, Futás, Úszás, Olvasás, Autóvezetés, Zenehallgatás, Tánc, Köhögés, Ásítás, Hajvágás, Ugrálás, Ébresztőóra, Mosogatás, Bevásárlás, Takarítás, Hógolyózás, Napozás, Telefonbeszélgetés, Kutyasétáltatás, Nyújtózkodás",
-      4: "Zongorázás, Kosárlabdázás, Gitározás, Főzés, Tanár, Orvos, Biciklizés, Fogorvos, Pincér, Postás, Kertész, Zsonglőr, Karmester, Pilóta, Mesemondó, Gyorsulás, Teniszező, Szörfös, Repülés, Futballmeccs",
-      5: "Szülinapi buli, Kalóz, Robot, Zombi, Szuperhős, Pingvin, Majom, Kenguru, Sakkozás, Tűzijáték, Vásári árus, Hegymászás, Fagyi az esőben, Szobrász, Műugrás, Fényképész, Bokszoló, Hóembergyártás, Karate, Sirály",
-      6: "Csillagok háborúja, Shrek, Pókember, Rocky, Mátyás király, Hamupipőke, Pinokkió, Karate kölyök, Alice Csodaországban, Indiana Jones, A Szépség és a Szörnyeteg, Toy Story, Robin Hood, Kincses sziget, Tom és Jerry"
+      1: "Alvás, Fogmosás, Evés, Zuhanyzás, Telefonálás, Nevetés, Sírás, Futás, Úszás, Olvasás, Autóvezetés, Tánc, Köhögés, Ásítás, Ugrálás, Mosogatás, Napozás, Nyújtózkodás, Hajszárítás, Főzés, Hógolyózás, Fázás, Izzadás, Hegymászás, Dobás, Kutya, Macska, Majom, Elefánt, Madár, Béka, Kenguru, Pingvin, Kígyó, Oroszlán, Nyuszi, Medve, Ébredés, Tüsszentés, Taps, Integetés, Ölelés, Gyaloglás, Zongorázás, Gitározás, Biciklizés, Evezés",
+      2: "Fodrász, Focista, Fényképezés, Síelés, Horgász, Szobafestő, Tanár, Orvos, Fogorvos, Pincér, Postás, Kertész, Zsonglőr, Karmester, Pilóta, Teniszező, Szörfös, Tűzoltó, Pék, Autószerelő, Szakács, Rendőr, Katona, Bohóc, Bűvész, Szobrász, Takarító, Villanyszerelő, Kosárlabdázás, Boksz, Birkózás, Tornász, Súlyemelő, Íjász, Golf, Vitorlázás, Búvár, Ablaktisztítás, Sorban állás, Bevásárlás, Lufifújás, Gyertyaelfújás, Ajándékbontás, Fadöntés, Gyümölcsszedés, Esernyőnyitás, Fűnyírás, Hóeltakarítás, Autómosás, Biliárd, Pingpong, Bowling, Hegedülés, Dobolás, Trombitálás, Madárijesztő, Robot, Szobor, Szellem",
+      3: "Vihar a tengeren, Esküvő, Cirkuszi bűvész, Szülinapi buli, Kalóz, Zombi, Szuperhős, Rakétaindítás, Hullámvasút, Vámpír, Sakkozás, Fagyi az esőben, Mentőakció, Akrobata, Állatorvos, Elalvás a buszon, Tűz a konyhában, Kincskeresés, Micimackó, Jégvarázs, Harry Potter, Oroszlánkirály, Shrek, Pókember, Hamupipőke, Pinokkió, Toy Story, Robin Hood, Piroska és a farkas, Hófehérke, Hüvelyk Matyi, Csizmás kandúr, Aladdin, A Szépség és a Szörnyeteg, Tom és Jerry, Mátyás király, János vitéz, Kisvakond, Vuk, Süsü, Titanic, Terminátor, Batman, Superman, Frankenstein, Dracula, Tarzan, Karate kölyök, Rocky, Indiana Jones, Alice Csodaországban, Csillagok háborúja, Némó nyomában, Madagaszkár, Verdák"
     }
   };
-  for (const k of Object.keys(MORE)) {
-    const have = new Set(CATS[k].words.map((w) => w[0].toLowerCase()));
-    for (const [pts, list] of Object.entries(MORE[k])) {
-      for (const w of list.split(",").map((s) => s.trim()).filter(Boolean)) {
-        if (!have.has(w.toLowerCase())) { have.add(w.toLowerCase()); CATS[k].words.push([w, Number(pts)]); }
-      }
+
+  // Összetett és idegen eredetű szavak: ismert, de nem hétköznapiak
+  const EXTRA = {
+    draw: {
+      2: "Nyaktiló, Villámhárító, Légvár, Napraforgó, Tűzcsap, Horgony, Iránytű, Kincsesláda, Papírsárkány, Vasaló, Hajszárító, Szendvics, Spagetti, Sushi, Hot dog, Pattogatott kukorica, Flamingó, Pelikán, Koala, Kaméleon, Piramis, Iglu, Bumeráng, Kormánykerék, Mentőmellény, Fogaskerék, Szélzsák, Gejzír, Kikötő, Mikrofon",
+      3: "Gilotin a vásártéren, Szamuráj, Gladiátor, Szfinx, Totem, Gondola, Orángután, Tukán, Piranha, Skorpió, Szkafander, Teleszkóp, Mikroszkóp, Periszkóp, Búvárpalack, Hóeke, Szivattyú, Turmixgép, Tornádó, Kalózlobogó, Légcsavaros repülő, Esőerdő, Szélerőmű, Napelem, Vészkijárat, Origami daru, Fitneszterem, Karaoke-est, Bonsai fa, Oázis tevével"
+    },
+    talk: {
+      2: "Nyaktiló, Villámhárító, Légkondicionáló, Hajszárító, Fogpiszkáló, Légycsapó, Esőcsatorna, Szájharmonika, Szendvics, Spagetti, Kebab, Sushi, Bőrönd, Kapucni, Garázs, Szuvenír, Reptér, Bumeráng, Flamingó, Kaméleon, Pelikán, Koala, Mamut, Gondola, Terasz, Szolárium, Kávéfőző, Cappuccino, Tiramisu, Makaróni, Fitnesz, Mamusz, Pizzafutár, Zsebtolvaj, Légvár, Napraforgó, Tűzcsap, Szélvédő, Kerékpárpumpa, Gyümölcslé, Kalózhajó",
+      3: "Szkafander, Szintetizátor, Metronóm, Kaleidoszkóp, Periszkóp, Teleszkóp, Mikroszkóp, Sztetoszkóp, Horoszkóp, Origami, Karaoke, Kimonó, Szamuráj, Gladiátor, Piramis, Szfinx, Gejzír, Tornádó, Hurrikán, Tájfun, Monszun, Cunami, Szafari, Oázis, Fata Morgana, Iglu, Totem, Kamikaze pilóta, Légcsavar, Villámcsapás, Esőerdő, Napelem, Szélerőmű, Kézifék, Visszapillantó tükör, Gázpedál, Kottaállvány, Vészkijárat, Menekülő szoba, Mentőmellény, Vadászgép, Oldtimer, Bonsai, Hipnotizőr, Gilotin, Piranha, Orángután, Tukán, Skorpió, Pterodaktilusz, Navigáció, Algoritmus, Szimuláció, Dzsungel, Prérifarkas, Kolibri, Gejzír"
+    },
+    mime: {
+      2: "Karaoke, Jóga, Aerobik, Szörfözés, Snowboardozás, Gördeszkázás, Görkorcsolyázás, Lovaglás, Hullahoppozás, Fotózás, Szelfizés, Légycsapás, Fogpiszkálás, Dugóhúzás, Szendvicskészítés, Pizzadobálás, Tésztagyúrás, Papírsárkány-eregetés, Origamihajtogatás, Bungee jumping, Ejtőernyőzés, Búvárkodás, Hipnotizőr, Balerina, Kaszkadőr, Operaénekes, Rodeós, Kötéltáncos, Tűznyelő, Mágus, Szamuráj, Gladiátor",
+      3: "Breakdance, Moonwalk, Tangó, Salsa, Rock and roll, Kung-fu, Szumó, Vadnyugati párbaj, Lassított felvétel, Robottánc, Pingvinjárás, Kardnyelő, Siklóernyőzés, Sárkányrepülés, Fitneszedzés, Pilates, Gilotin, Dzsungel király, Kolibri, Flamingó, Orángután, Pelikán, Kaméleon, Piranha, Skorpió, Pterodaktilusz, Kolosszus"
+    }
+  };
+  const CARDS = [];
+  { const seen = new Set();
+    for (const k of Object.keys(WORDS)) for (const lv of [1, 2, 3])
+      for (const w of (WORDS[k][lv] + "," + ((EXTRA[k] || {})[lv] || "")).split(",").map((s) => s.trim()).filter(Boolean)) {
+        const id = k + ":" + w.toLowerCase();
+        if (!seen.has(id)) { seen.add(id); CARDS.push({ id, k, word: w, lv }); }
+      } }
+
+  const TEAM_COLORS = ["#ffc83d", "#35d0ff", "#c77dff", "#a3e635"];
+  const KEY = "activity-kartyak-v2";
+  const S = { teamCount: 2, names: ["A csapat", "B csapat", "C csapat", "D csapat"], scores: [0, 0, 0, 0], time: 60, boardLen: 48, mode: "board", turn: 0, started: false, level: "mix", sound: true,
+    active: { draw: true, talk: false, mime: false }, seen: [] };
+  try {
+    const x = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (x && typeof x === "object") {
+      if (x.teamCount >= 2 && x.teamCount <= 4) S.teamCount = x.teamCount;
+      if (Array.isArray(x.names)) x.names.slice(0, 4).forEach((n, i) => { if (typeof n === "string" && n.trim()) S.names[i] = n.slice(0, 16); });
+      if (Array.isArray(x.scores)) x.scores.slice(0, 4).forEach((n, i) => { if (Number.isFinite(n)) S.scores[i] = n; });
+      if ([30, 60, 90].includes(x.time)) S.time = x.time;
+      if ([24, 48].includes(x.boardLen)) S.boardLen = x.boardLen;
+      if (x.mode === "free" || x.mode === "board") S.mode = x.mode;
+      if (Number.isInteger(x.turn) && x.turn >= 0 && x.turn < S.teamCount) S.turn = x.turn;
+      if (typeof x.started === "boolean") S.started = x.started;
+      if (["easy", "mix", "hard"].includes(x.level)) S.level = x.level;
+      if (typeof x.sound === "boolean") S.sound = x.sound;
+      if (Array.isArray(x.seen)) S.seen = x.seen.filter((s) => typeof s === "string");
+    }
+  } catch (e) {}
+  const seen = new Set(S.seen);
+  function save() { try { S.seen = [...seen]; localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  let cur = null, phase = "idle", timeLeft = S.time, endAt = 0, tid = null, lastSecs = -1, stealing = false;
+
+  /* Hang, rezgés, képernyő ébren tartása */
+  let ac = null, wl = null;
+  function initAudio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (ac && ac.state === "suspended") ac.resume();
+    try { if (navigator.wakeLock && !wl) navigator.wakeLock.request("screen").then((l) => { wl = l; l.addEventListener("release", () => { wl = null; }); }).catch(() => {}); } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && phase !== "idle") initAudio(); });
+  function beep(f, d, type, v) {
+    if (!S.sound || !ac) return;
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = type || "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(v || .15, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d);
+  }
+  /* Ünneplő hangok: mind a böngészőben készül, négyféle van, és nem ismétlődik kétszer egymás után */
+  let NB = null, lastCheer = -1;
+  function noiseBuf() {
+    if (!NB) { NB = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = NB.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    return NB;
+  }
+  function puff(t, v, type, freq, q, len) {
+    const src = ac.createBufferSource(); src.buffer = noiseBuf();
+    const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = ac.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + len);
+    src.connect(f); f.connect(g); g.connect(ac.destination); src.start(t, Math.random() * .5, len + .02);
+  }
+  function applause(dur, vol) {
+    const t0 = ac.currentTime + .02, n = Math.floor(dur * 45);
+    for (let i = 0; i < n; i++) {
+      const x = (Math.random() + Math.random()) / 2;
+      puff(t0 + x * dur, vol * (.35 + Math.random() * .65), "bandpass", 1200 + Math.random() * 2600, .9, .05 + Math.random() * .05);
     }
   }
-  const TIME = 60;
-  const KEY = "activity-kartyak-v1";
-
-  const $ = (id) => document.getElementById(id);
-  const state = {
-    active: { draw: true, talk: true, mime: true },
-    deck: [], current: null, hidden: false, awarded: false,
-    teams: [{ name: "A csapat", score: 0 }, { name: "B csapat", score: 0 }],
-    last: null, timeLeft: TIME, timerId: null
-  };
-
-  function load() {
-    try {
-      const s = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (s && Array.isArray(s.teams) && s.teams.length >= 2 && s.teams.length <= 4) state.teams = s.teams;
-    } catch (e) {}
+  function note(f, t, d, type, v, lp) {
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = type; o.frequency.value = f; fl.type = "lowpass"; fl.frequency.value = lp || 4000;
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(fl); fl.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d + .05);
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ teams: state.teams })); } catch (e) {}
+  function cheer() {
+    if (!S.sound || !ac) return;
+    let v; do { v = Math.floor(Math.random() * 4); } while (v === lastCheer); lastCheer = v;
+    const t = ac.currentTime + .02;
+    if (v === 0) { // Ováció
+      applause(2.4, .16);
+      setTimeout(() => { if (S.sound) { const u = ac.currentTime; puff(u, .25, "bandpass", 700, 1.5, .5); } }, 250);
+    } else if (v === 1) { // Pezsgődugó
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(45, t + .14);
+      g.gain.setValueAtTime(.6, t); g.gain.exponentialRampToValueAtTime(.001, t + .16);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .2);
+      puff(t, .45, "highpass", 1800, .7, .09);
+      for (let i = 0; i < 70; i++) { const u = t + .1 + Math.pow(Math.random(), 1.6) * 1.5; puff(u, .05 + Math.random() * .05, "highpass", 5000 + Math.random() * 4000, .7, .02 + Math.random() * .02); }
+      applause(1.4, .1);
+    } else if (v === 2) { // Fanfár
+      [[392, 0], [523, .13], [659, .26], [784, .4]].forEach(([f, d], i) => {
+        const len = i === 3 ? .9 : .2; note(f, t + d, len, "sawtooth", .12, 2600); note(f * 2, t + d, len, "square", .03, 3000);
+      });
+      applause(1.8, .12);
+    } else { // Csillogás
+      [1047, 1319, 1568, 2093, 1568, 2093, 2637].forEach((f, i) => { note(f, t + i * .08, .7, "sine", .12, 6000); note(f * 2, t + i * .08, .3, "sine", .03, 8000); });
+      applause(1.6, .11);
+    }
+  }
+  function buzz(p) { if (S.sound) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} } }
+
+  /* Konfetti */
+  const fx = $("fx"), fctx = fx.getContext("2d");
+  let parts = [], raf = 0;
+  function confetti() {
+    if (reduce) return;
+    const dpr = window.devicePixelRatio || 1;
+    fx.width = innerWidth * dpr; fx.height = innerHeight * dpr; fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cols = ["#ff4d8d", "#ffc83d", "#19c58b", "#3d8bff", "#c77dff", "#fff"];
+    for (let i = 0; i < 110; i++) {
+      const a = -Math.PI / 2 + (Math.random() - .5) * 1.6, sp = 8 + Math.random() * 12;
+      parts.push({ x: innerWidth / 2, y: innerHeight * .62, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4 + Math.random() * 5,
+        c: cols[i % cols.length], rot: Math.random() * 6, vr: (Math.random() - .5) * .4, life: 0 });
+    }
+    if (!raf) raf = requestAnimationFrame(stepFx);
+  }
+  function stepFx() {
+    fctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter((p) => p.life < 110 && p.y < innerHeight + 40);
+    for (const p of parts) {
+      p.life++; p.vy += .35; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot); fctx.fillStyle = p.c; fctx.globalAlpha = Math.max(0, 1 - p.life / 110);
+      fctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); fctx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(stepFx) : 0;
+    if (!raf) fctx.clearRect(0, 0, innerWidth, innerHeight);
   }
 
-  function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a;
+  /* Kirajzolás */
+  let toastT = 0;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200);
   }
-  function buildDeck() {
-    const d = [];
-    for (const k of Object.keys(CATS)) if (state.active[k]) for (const [word, pts] of CATS[k].words) d.push({ k, word, pts });
-    state.deck = shuffle(d);
-  }
+  function levelOk(lv) { return S.level === "mix" || (S.level === "easy" && lv <= 2) || (S.level === "hard" && lv >= 2); }
+  function pool() { return CARDS.filter((c) => S.active[c.k] && levelOk(c.lv)); }
+  function renderLeft() { const p = pool(); $("left").textContent = p.filter((c) => !seen.has(c.id)).length + " / " + p.length + " kártya"; }
 
+  function renderBoard() {
+    const b = $("board"); b.textContent = ""; $("boardBtn").hidden = S.mode !== "board";
+    for (let i = 0; i < S.teamCount; i++) {
+      const d = document.createElement("div"); d.className = "team" + (S.mode === "board" && i === S.turn ? " turn" : ""); d.style.setProperty("--tc", TEAM_COLORS[i]);
+      const n = document.createElement("span"); n.textContent = S.names[i];
+      const s = document.createElement("b"); s.textContent = S.mode === "board" && S.scores[i] >= S.boardLen + 1 ? "Cél" : S.scores[i]; s.id = "sc" + i;
+      d.append(n, s); b.appendChild(d);
+    }
+    if (S.teamCount < 4) {
+      const a = document.createElement("button"); a.className = "team-add"; a.textContent = "+"; a.setAttribute("aria-label", "Csapat hozzáadása");
+      a.addEventListener("click", (e) => { e.stopPropagation(); S.teamCount++; save(); renderBoard(); toast(S.names[S.teamCount - 1] + " hozzáadva. A nevére koppintva átnevezheted."); });
+      b.appendChild(a);
+    }
+  }
   function renderChips() {
     document.querySelectorAll(".chip").forEach((b) => {
       const k = b.dataset.k;
       b.innerHTML = CATS[k].icon + "<span>" + CATS[k].name + "</span>";
-      b.setAttribute("aria-pressed", String(state.active[k]));
+      b.setAttribute("aria-pressed", String(S.active[k]));
+      b.classList.toggle("locked", S.mode === "board" && fieldCat(S.scores[S.turn]) !== null);
     });
   }
-
-  function renderCard() {
-    const el = $("card");
-    const c = state.current;
-    if (!c) {
-      el.className = "card is-back";
-      el.innerHTML = '<div class="hint">Húzz egy kártyát</div><div class="sub">Csak az látja a szót, aki éppen játszik.</div>';
-      return;
+  const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  function renderBack() {
+    const idle = phase === "idle", board = S.mode === "board";
+    let title = idle ? "Activity" : "A kártya a tiéd", sub = idle ? "Húzz egy kártyát, és add a játékos kezébe a telefont." : "Koppints, a szót csak te látod. Az időt te indítod.", col = "";
+    if (board) {
+      const pos = S.scores[S.turn], fc = fieldCat(pos);
+      col = ' style="color:' + TEAM_COLORS[S.turn] + '"';
+      if (idle) { title = S.names[S.turn]; sub = !S.started ? "Sorsoljátok ki, ki kezd, vagy húzzatok." : fc ? "Te jössz. A meződ: " + CATS[fc].name + "." : pos === 0 ? "Te jössz. A rajtnál szabadon választhatsz kategóriát." : "Cél!"; }
+      else title = S.names[S.turn] + ", a kártya a tiéd";
     }
-    el.className = "card k-" + c.k;
-    const dots = Array.from({ length: 6 }, (_, i) => '<i class="' + (i < c.pts ? "on" : "") + '"></i>').join("");
-    el.innerHTML =
-      '<div class="meta"><span class="cat">' + CATS[c.k].icon + CATS[c.k].name + '</span><span class="pts">' + c.pts + '</span></div>' +
+    $("back").innerHTML = '<div class="logo"><div class="q"><span>?</span></div><div class="t"' + col + '>' + esc(title) + '</div><div class="s">' + esc(sub) + '</div></div>';
+  }
+  function fillFront(c) {
+    const f = $("front"), len = c.word.length;
+    f.className = "face front k-" + c.k;
+    const dots = [1, 2, 3].map((i) => '<i class="' + (i <= c.lv ? "on" : "") + '"></i>').join("");
+    f.innerHTML = '<div class="wm">' + CATS[c.k].icon + '</div>' +
+      '<div class="meta"><span class="cat">' + CATS[c.k].icon + CATS[c.k].name + '</span><span class="pts">' + PTS[c.lv] + '</span></div>' +
       '<div class="word-wrap"><div class="word"></div></div>' +
-      '<div class="foot"><span class="dots" aria-hidden="true">' + dots + '</span><span>' + (c.pts >= 5 ? "nehéz" : c.pts === 4 ? "közepes" : "könnyű") + '</span></div>';
-    el.querySelector(".word").textContent = c.word;
-    if (state.hidden) {
-      const cover = document.createElement("button");
-      cover.className = "covered";
-      cover.textContent = "A szó el van rejtve. Koppints a megmutatásához.";
-      cover.addEventListener("click", () => { state.hidden = false; renderAll(); });
-      el.appendChild(cover);
-    }
+      '<div class="rule">' + CATS[c.k].rule + '</div>' +
+      '<div class="foot"><span class="dots" aria-hidden="true">' + dots + '</span><span>' + LEVEL[c.lv] + ' · ' + PTS[c.lv] + ' pont</span></div>';
+    const w = f.querySelector(".word"); w.textContent = c.word;
+    const size = len <= 7 ? 3.6 : len <= 10 ? 3 : len <= 13 ? 2.4 : len <= 17 ? 2 : 1.7;
+    w.style.fontSize = size + "rem";
   }
 
-  function renderTeams() {
-    const wrap = $("teams");
-    wrap.textContent = "";
-    state.teams.forEach((t, i) => {
-      const b = document.createElement("button");
-      b.className = "team" + (state.current && !state.awarded ? " can-award" : "");
-      b.innerHTML = '<span class="n"></span><span class="s"></span>';
-      b.querySelector(".n").textContent = t.name;
-      b.querySelector(".s").textContent = t.score;
-      b.addEventListener("click", () => award(i));
-      wrap.appendChild(b);
-    });
-    $("addTeam").disabled = state.teams.length >= 4;
-    $("delTeam").disabled = state.teams.length <= 2;
-    $("undo").disabled = !state.last;
+  const b1 = $("b1"), b2 = $("b2"), bar = $("bar");
+  function canRoll() { return S.mode === "board" && !S.started && phase === "idle"; }
+  function renderBar() {
+    const showB1 = phase !== "idle" || canRoll(), hideB2 = phase === "over" && stealing, board = S.mode === "board";
+    b1.hidden = !showB1; b2.hidden = hideB2;
+    bar.classList.toggle("solo", !showB1 || hideB2);
+    b2.classList.remove("go", "attn");
+    if (phase === "idle") { b1.textContent = "Ki kezd? Sorsolás"; b2.textContent = "Kártyát húzok"; b2.classList.add("attn"); }
+    else if (phase === "down") { b1.textContent = "Másik kártya"; b2.textContent = "Felfedés"; b2.classList.add("go", "attn"); }
+    else if (phase === "ready") { b1.textContent = "Passz"; b2.textContent = "Idő indítása"; b2.classList.add("go", "attn"); }
+    else if (phase === "live") { b1.textContent = stealing ? "Feladjuk" : "Passz"; b2.textContent = "Kitalálták!"; b2.classList.add("go"); }
+    else { b1.textContent = board ? "Következő csapat" : "Következő"; b2.textContent = "Többiek is tippelhetnek"; b2.classList.add("attn"); }
   }
-
   function renderTimer() {
-    const running = state.timerId !== null;
-    $("startStop").textContent = running ? "Idő megállítása" : state.timeLeft < TIME && state.timeLeft > 0 ? "Idő folytatása" : "Idő indítása";
-    $("startStop").disabled = !state.current;
-    $("peek").disabled = !state.current;
-    $("peek").textContent = state.hidden ? "Szó megmutatása" : "Szó elrejtése";
-    $("secs").textContent = state.current ? state.timeLeft + " mp" : "";
-    $("bar").style.transform = "scaleX(" + (state.timeLeft / TIME) + ")";
-    $("timerRow").classList.toggle("is-low", state.timeLeft <= 10 && state.current);
-    $("timerLabel").textContent = state.timeLeft === 0 ? "Lejárt az idő!" : TIME + " másodperc";
+    const t = $("timer"); $("secs").textContent = phase === "idle" ? "" : timeLeft;
+    $("fill").style.transform = "scaleX(" + (phase === "idle" ? 1 : timeLeft / S.time) + ")";
+    t.classList.toggle("low", phase === "live" && timeLeft <= 10);
+    t.classList.toggle("over", phase === "over");
+    t.classList.toggle("steal", stealing && phase === "live");
+    $("tlabel").textContent = stealing && (phase === "live" || phase === "over") ? "Többiek" : "";
   }
+  function render() { renderBar(); renderTimer(); renderLeft(); }
 
-  function renderLeft() {
-    $("left").textContent = state.deck.length + " kártya maradt";
+  /* Időzítő */
+  function startTimer() {
+    stopTimer();
+    endAt = Date.now() + timeLeft * 1000; lastSecs = timeLeft;
+    tid = setInterval(tick, 200);
   }
-
-  function renderAll() { renderChips(); renderCard(); renderTeams(); renderTimer(); renderLeft(); }
-
-  function stopTimer() {
-    if (state.timerId !== null) { clearInterval(state.timerId); state.timerId = null; }
-  }
+  function stopTimer() { if (tid !== null) { clearInterval(tid); tid = null; } }
   function tick() {
-    state.timeLeft -= 1;
-    if (state.timeLeft <= 0) {
-      state.timeLeft = 0;
-      stopTimer();
-      try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+    const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    if (left !== timeLeft) {
+      timeLeft = left;
+      if (left > 0 && left <= 5) { beep(880, .08, "square", .08); buzz(30); }
     }
+    if (left <= 0) { stopTimer(); timeUp(); }
     renderTimer();
   }
+  function timeUp() {
+    phase = "over"; timeLeft = 0;
+    beep(200, .7, "sawtooth", .2); buzz([250, 100, 250]);
+    toast(stealing ? "Lejárt az idő!" : "Lejárt az idő! A többiek még tippelhetnek.");
+    const st = $("stage"); st.classList.remove("shake"); void st.offsetWidth; st.classList.add("shake");
+    render();
+  }
 
-  function toast(msg) { $("toast").textContent = msg; }
-
+  /* Játékmenet */
+  function nextCard() {
+    const p = pool();
+    if (!p.length) { toast("Kapcsolj be legalább egy kategóriát."); return null; }
+    let avail = p.filter((c) => !seen.has(c.id));
+    if (!avail.length) { p.forEach((c) => seen.delete(c.id)); avail = p; toast("Minden kártya elfogyott, újrakevertük a paklit."); }
+    const c = avail[Math.floor(Math.random() * avail.length)];
+    seen.add(c.id); save(); return c;
+  }
   function drawCard() {
-    stopTimer();
-    if (state.deck.length === 0) buildDeck();
-    if (state.deck.length === 0) { toast("Válassz ki legalább egy kategóriát."); return; }
-    state.current = state.deck.pop();
-    state.hidden = false;
-    state.awarded = false;
-    state.timeLeft = TIME;
-    toast("");
-    renderAll();
+    initAudio();
+    const c = nextCard(); if (!c) return;
+    S.started = true; save();
+    stopTimer(); stealing = false; cur = c; fillFront(c);
+    const card = $("card"), slot = $("slot");
+    card.classList.add("noanim"); card.classList.remove("flipped"); void card.offsetWidth; card.classList.remove("noanim");
+    slot.classList.remove("enter", "exit"); void slot.offsetWidth; slot.classList.add("enter");
+    timeLeft = S.time; phase = "down"; renderBack(); render();
+    beep(520, .08, "triangle", .1);
   }
-
-  function award(i) {
-    if (!state.current) { toast("Előbb húzz egy kártyát."); return; }
-    if (state.awarded) { toast("Ezért a kártyáért már jött pont. A Visszavonnal javíthatod."); return; }
-    state.teams[i].score += state.current.pts;
-    state.awarded = true;
-    state.last = { team: i, pts: state.current.pts };
-    stopTimer();
-    save();
-    toast(state.teams[i].name + ": +" + state.current.pts + " pont");
-    renderAll();
+  function leave(then) {
+    const slot = $("slot"); stopTimer();
+    const done = () => {
+      cur = null; phase = "idle"; timeLeft = S.time; stealing = false;
+      const card = $("card"); card.classList.add("noanim"); card.classList.remove("flipped"); void card.offsetWidth; card.classList.remove("noanim");
+      slot.classList.remove("exit"); slot.classList.add("enter"); renderBack(); render();
+      if (then) then();
+    };
+    if (reduce) return done();
+    slot.classList.remove("enter"); void slot.offsetWidth; slot.classList.add("exit");
+    setTimeout(done, 320);
   }
+  function reveal() {
+    if (phase !== "down") return;
+    initAudio();
+    $("card").classList.add("flipped");
+    phase = "ready"; beep(660, .1, "triangle", .12); render();
+  }
+  function startRun() {
+    if (phase !== "ready") return;
+    phase = "live"; startTimer(); beep(880, .1, "triangle", .12); render();
+  }
+  function startSteal() {
+    if (phase !== "over" || stealing) return;
+    stealing = true; timeLeft = S.time; phase = "live"; startTimer();
+    beep(660, .12, "triangle", .12); buzz(40); toast("Beszállnak a többiek! Újabb " + S.time + " másodperc.");
+    render();
+  }
+  function skip() { leave(() => drawCard()); }
 
-  $("draw").addEventListener("click", drawCard);
-  $("startStop").addEventListener("click", () => {
-    if (!state.current) return;
-    if (state.timerId !== null) { stopTimer(); }
-    else {
-      if (state.timeLeft === 0) state.timeLeft = TIME;
-      state.timerId = setInterval(tick, 1000);
+  /* Pontozás */
+  const veil = $("veil"), sheet = $("sheet");
+  function openSheet() {
+    if (!cur) return;
+    const prevPhase = phase; stopTimer();
+    $("picks").textContent = "";
+    for (let i = 0; i < S.teamCount; i++) {
+      const b = document.createElement("button"); b.className = "pick"; b.style.setProperty("--tc", TEAM_COLORS[i]);
+      const n = document.createElement("span"); n.textContent = S.names[i];
+      const p = document.createElement("i"); p.textContent = "+" + PTS[cur.lv];
+      b.append(n, p); b.addEventListener("click", () => award(i)); $("picks").appendChild(b);
     }
-    renderTimer();
+    veil.classList.add("open"); sheet.classList.add("open");
+    sheet.dataset.prev = prevPhase;
+  }
+  function closeSheet() { veil.classList.remove("open"); sheet.classList.remove("open"); }
+  function cancelSheet() {
+    closeSheet();
+    if (sheet.dataset.prev === "live" && timeLeft > 0) startTimer();
+  }
+  function award(i) {
+    if (!cur) return;
+    const pts = PTS[cur.lv], prev = S.scores[i];
+    S.scores[i] = S.mode === "board" ? Math.min(prev + pts, finishPos()) : prev + pts; save(); closeSheet();
+    const won = S.mode === "board" && S.scores[i] >= finishPos();
+    if (S.mode === "board" && !won) advanceTurn(true); else renderBoard();
+    const el = $("sc" + i); if (el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+    confetti(); toast(S.names[i] + ": +" + pts + " pont");
+    cheer();
+    buzz([60, 40, 60]);
+    leave();
+    if (S.mode === "board") setTimeout(() => showBoard({ team: i, from: prev, to: S.scores[i] }), 900);
+  }
+
+  /* Játéktábla: a pontszám a mező száma. A mező színe dönt a kategóriáról, a csapatok sorban jönnek. */
+  const bv = $("bv"); let closeT = 0, rolling = false;
+  const FIELD_CATS = ["draw", "talk", "mime"], LETTER = { draw: "R", talk: "K", mime: "M" };
+  function finishPos() { return S.boardLen + 1; }
+  function fieldCat(pos) { return pos > 0 && pos <= S.boardLen ? FIELD_CATS[Math.floor((pos - 1) / 8) % 3] : null; }
+  function syncCat() {
+    if (S.mode !== "board") return;
+    const fc = fieldCat(S.scores[S.turn]);
+    if (fc) for (const j of Object.keys(S.active)) S.active[j] = j === fc;
+  }
+  function advanceTurn(quiet) {
+    S.turn = (S.turn + 1) % S.teamCount; save(); syncCat(); renderBoard(); renderChips(); renderBack(); render();
+    if (!quiet) toast("Következik: " + S.names[S.turn]);
+  }
+  function newGame() {
+    stopTimer(); stealing = false; closeSheet(); cur = null; phase = "idle"; timeLeft = S.time;
+    const card = $("card"); card.classList.add("noanim"); card.classList.remove("flipped"); void card.offsetWidth; card.classList.remove("noanim");
+    S.scores = [0, 0, 0, 0]; S.turn = 0; S.started = false; save(); syncCat(); renderBoard(); renderChips(); renderBack(); render();
+  }
+  function rollStart() {
+    if (rolling) return; rolling = true; initAudio();
+    const n = S.teamCount, final = Math.floor(Math.random() * n), steps = n * 3 + ((final - S.turn + n) % n); let k = 0;
+    const go = () => {
+      S.turn = (S.turn + 1) % n; k++; syncCat(); renderBoard(); renderChips(); renderBack();
+      beep(480 + k * 22, .05, "square", .06);
+      if (k < steps) setTimeout(go, 70 + k * 12);
+      else { rolling = false; S.started = true; save(); render(); toast(S.names[S.turn] + " kezd!"); confetti(); beep(880, .15, "triangle", .12); }
+    };
+    go();
+  }
+
+  function geom() { const rows = S.boardLen / 4 + 2; return { rows, W: 25, H: 100 / rows }; }
+  function posXY(pos, k, g) {
+    const n = S.teamCount, F = finishPos(); pos = Math.min(Math.max(pos, 0), F);
+    if (pos === 0 || pos === F) return { x: 50 + (k - (n - 1) / 2) * 8, y: ((pos === 0 ? 0 : g.rows - 1) + .5) * g.H };
+    const row = 1 + Math.floor((pos - 1) / 4), c0 = (pos - 1) % 4, col = (row - 1) % 2 === 0 ? c0 : 3 - c0;
+    return { x: (col + .5) * g.W + (k - (n - 1) / 2) * g.W * .22, y: (row + .5) * g.H };
+  }
+  function addCell(box, cls, l, t, w, h, cc, text, num) {
+    const d = document.createElement("div"); d.className = "cell " + cls;
+    d.style.cssText = "left:" + l + "%;top:" + t + "%;width:" + w + "%;height:" + h + "%";
+    const inner = document.createElement("div"); if (cc) inner.style.setProperty("--cc", cc);
+    if (num) { const sm = document.createElement("small"); sm.textContent = num; inner.appendChild(sm); }
+    const sp = document.createElement("span"); sp.textContent = text; inner.appendChild(sp);
+    d.appendChild(inner); box.appendChild(d);
+  }
+  function buildBoard() {
+    const g = geom(), box = $("trackbox"); box.textContent = "";
+    addCell(box, "start", 0, 0, 100, g.H, null, "RAJT", "");
+    for (let pos = 1; pos <= S.boardLen; pos++) {
+      const row = 1 + Math.floor((pos - 1) / 4), c0 = (pos - 1) % 4, col = (row - 1) % 2 === 0 ? c0 : 3 - c0, fc = fieldCat(pos);
+      addCell(box, "", col * g.W, row * g.H, g.W, g.H, "var(--" + fc + ")", LETTER[fc], pos);
+    }
+    addCell(box, "fin", 0, (g.rows - 1) * g.H, 100, g.H, null, "CÉL", "");
+    for (let k = 0; k < S.teamCount; k++) {
+      const pw = document.createElement("div"); pw.className = "pawn"; pw.id = "pawn" + k; pw.style.setProperty("--tc", TEAM_COLORS[k]); pw.style.width = g.W * .24 + "%";
+      const b = document.createElement("b"); b.textContent = (S.names[k][0] || "?").toUpperCase(); pw.appendChild(b); box.appendChild(pw);
+    }
+  }
+  function placePawn(k, pos) {
+    const pw = $("pawn" + k); if (!pw) return; const { x, y } = posXY(pos, k, geom());
+    pw.style.left = x + "%"; pw.style.top = y + "%";
+  }
+  function renderLegend() {
+    const l = $("legend"); l.textContent = "";
+    for (let k = 0; k < S.teamCount; k++) {
+      const sp = document.createElement("span"), i = document.createElement("i"); i.style.setProperty("--tc", TEAM_COLORS[k]); sp.style.setProperty("--tc", TEAM_COLORS[k]);
+      if (k === S.turn) sp.className = "turn";
+      const pos = Math.min(S.scores[k], finishPos());
+      sp.append(i, document.createTextNode((k === S.turn ? "▶ " : "") + S.names[k] + ": " + (pos >= finishPos() ? "Cél" : pos + ". mező"))); l.appendChild(sp);
+    }
+  }
+  function hideBoard() { clearTimeout(closeT); bv.classList.remove("open"); }
+  function showBoard(o) {
+    clearTimeout(closeT); buildBoard(); renderLegend();
+    $("bvWin").hidden = true; $("bvGo").hidden = false; $("bvInfo").textContent = "Következik: " + S.names[S.turn];
+    for (let k = 0; k < S.teamCount; k++) placePawn(k, o && k === o.team ? o.from : S.scores[k]);
+    bv.classList.add("open");
+    if (o) setTimeout(() => walk(o), 500);
+  }
+  function walk(o) {
+    const F = finishPos(), target = Math.min(o.to, F), k = o.team; let cur = Math.min(o.from, F);
+    const step = () => {
+      if (cur < target) {
+        cur++; placePawn(k, cur);
+        const pw = $("pawn" + k); if (pw) { pw.classList.remove("hop"); void pw.offsetWidth; pw.classList.add("hop"); try { pw.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+        beep(460 + (cur % 8) * 45, .06, "triangle", .08); setTimeout(step, 190);
+      } else if (o.to >= F) win(k);
+      else closeT = setTimeout(hideBoard, 2400);
+    };
+    step();
+  }
+  function win(k) {
+    const w = $("bvWin"); w.textContent = ""; $("bvGo").hidden = true;
+    const h = document.createElement("h3"); h.textContent = S.names[k] + " nyert! 🏆"; w.appendChild(h);
+    const a = document.createElement("button"); a.className = "done"; a.textContent = "Új játék";
+    a.addEventListener("click", (e) => { e.stopPropagation(); newGame(); hideBoard(); toast("Új játék, minden bábu a rajtnál áll."); });
+    const b = document.createElement("button"); b.className = "small"; b.textContent = "Tovább játszom";
+    b.addEventListener("click", (e) => { e.stopPropagation(); hideBoard(); });
+    w.append(a, b); w.hidden = false; confetti(); setTimeout(confetti, 600); cheer();
+  }
+  let newArm = 0;
+  $("newBtn").addEventListener("click", () => {
+    const b = $("newBtn");
+    if (!newArm) { b.classList.add("armed"); toast("Új játék? Koppints még egyszer."); newArm = setTimeout(() => { newArm = 0; b.classList.remove("armed"); }, 3000); return; }
+    clearTimeout(newArm); newArm = 0; b.classList.remove("armed"); newGame(); toast("Új játék indul.");
   });
-  $("peek").addEventListener("click", () => { state.hidden = !state.hidden; renderAll(); });
-  $("undo").addEventListener("click", () => {
-    if (!state.last) return;
-    state.teams[state.last.team].score -= state.last.pts;
-    state.awarded = false;
-    toast("Visszavonva: −" + state.last.pts + " pont (" + state.teams[state.last.team].name + ")");
-    state.last = null;
-    save();
-    renderAll();
+  $("boardBtn").addEventListener("click", () => showBoard());
+  $("bvGo").addEventListener("click", hideBoard);
+  bv.addEventListener("click", (e) => { if ($("bvWin").hidden && e.target.id !== "bvGo") hideBoard(); });
+
+  /* Gombok */
+  b2.addEventListener("click", () => {
+    if (phase === "idle") drawCard();
+    else if (phase === "down") reveal();
+    else if (phase === "ready") startRun();
+    else if (phase === "over") startSteal();
+    else if (S.mode === "board" && !stealing) award(S.turn);
+    else openSheet();
   });
-  $("addTeam").addEventListener("click", () => {
-    if (state.teams.length >= 4) return;
-    state.teams.push({ name: "ABCD"[state.teams.length] + " csapat", score: 0 });
-    save(); renderTeams();
-  });
-  $("delTeam").addEventListener("click", () => {
-    if (state.teams.length <= 2) return;
-    state.teams.pop(); state.last = null; save(); renderTeams();
-  });
-  // Nullázás két koppintással, mert az artifact nem tud megerősítő ablakot mutatni.
-  let resetArmed = false, resetTimer = null;
-  $("resetScores").addEventListener("click", () => {
-    if (!resetArmed) {
-      resetArmed = true; $("resetScores").textContent = "Biztosan?";
-      resetTimer = setTimeout(() => { resetArmed = false; $("resetScores").textContent = "Nulláz"; }, 3000);
+  b1.addEventListener("click", () => {
+    if (phase === "idle") { if (canRoll()) rollStart(); return; }
+    if (phase === "over" || (phase === "live" && stealing)) {
+      stopTimer();
+      if (S.mode === "board") leave(() => advanceTurn()); else skip();
       return;
     }
-    clearTimeout(resetTimer); resetArmed = false; $("resetScores").textContent = "Nulláz";
-    state.teams.forEach((t) => { t.score = 0; }); state.last = null; save(); toast("Pontok nullázva."); renderTeams();
+    skip();
   });
+  $("back").addEventListener("click", () => { if (phase === "idle") drawCard(); else if (phase === "down") reveal(); });
+  $("cancel").addEventListener("click", cancelSheet);
+  veil.addEventListener("click", cancelSheet);
 
   document.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k;
-    const onCount = Object.values(state.active).filter(Boolean).length;
-    if (state.active[k] && onCount === 1) { toast("Legalább egy kategória maradjon bekapcsolva."); return; }
-    state.active[k] = !state.active[k];
-    buildDeck();
-    renderAll();
+    if (S.mode === "board" && fieldCat(S.scores[S.turn])) { toast("A mező színe dönt: " + CATS[fieldCat(S.scores[S.turn])].name + "."); return; }
+    for (const j of Object.keys(S.active)) S.active[j] = j === k;
+    save(); renderChips(); renderLeft();
   }));
 
-  load();
-  buildDeck();
-  renderAll();
+  /* Beállítások */
+  function seg(id, opts, get, set) {
+    const w = $(id); w.textContent = "";
+    opts.forEach(([val, label]) => {
+      const b = document.createElement("button"); b.textContent = label; b.setAttribute("aria-pressed", String(get() === val));
+      b.addEventListener("click", () => { set(val); save(); seg(id, opts, get, set); });
+      w.appendChild(b);
+    });
+  }
+  function renderSettings() {
+    seg("segMode", [["board", "Táblás"], ["free", "Szabad"]], () => S.mode, (v) => { S.mode = v; syncCat(); renderChips(); renderBoard(); renderBack(); render(); });
+    seg("segTeams", [[2, "2"], [3, "3"], [4, "4"]], () => S.teamCount, (v) => { S.teamCount = v; if (S.turn >= v) S.turn = 0; syncCat(); renderNames(); renderBoard(); renderChips(); renderBack(); });
+    seg("segTime", [[30, "30 mp"], [60, "60 mp"], [90, "90 mp"]], () => S.time, (v) => { S.time = v; if (phase === "idle" || phase === "down") { timeLeft = v; renderTimer(); } });
+    seg("segLevel", [["easy", "Könnyebb"], ["mix", "Vegyes"], ["hard", "Nehezebb"]], () => S.level, (v) => { S.level = v; renderLeft(); });
+    seg("segBoard", [[24, "Rövid (24)"], [48, "Eredeti (48)"]], () => S.boardLen, (v) => { S.boardLen = v; syncCat(); renderChips(); renderBoard(); renderBack(); });
+    seg("segSound", [[true, "Be"], [false, "Ki"]], () => S.sound, (v) => { S.sound = v; });
+    renderNames();
+  }
+  function renderNames() {
+    const w = $("names"); w.textContent = "";
+    for (let i = 0; i < S.teamCount; i++) {
+      const inp = document.createElement("input"); inp.value = S.names[i]; inp.maxLength = 16; inp.setAttribute("aria-label", (i + 1) + ". csapat neve");
+      inp.style.borderLeft = "6px solid " + TEAM_COLORS[i];
+      inp.addEventListener("input", () => { S.names[i] = inp.value.trim() || "Csapat " + (i + 1); save(); renderBoard(); });
+      w.appendChild(inp);
+    }
+  }
+  const dlg = $("settings");
+  $("gear").addEventListener("click", () => { renderSettings(); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); });
+  $("board").addEventListener("click", () => $("gear").click());
+  $("closeSettings").addEventListener("click", () => dlg.close ? dlg.close() : dlg.removeAttribute("open"));
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  $("resetDeck").addEventListener("click", () => { seen.clear(); save(); renderLeft(); toast("A pakli újra tele van."); });
+  let armed = false, armT = 0;
+  $("resetScores").addEventListener("click", () => {
+    const b = $("resetScores");
+    if (!armed) { armed = true; b.textContent = "Biztosan?"; armT = setTimeout(() => { armed = false; b.textContent = "Új játék"; }, 3000); return; }
+    clearTimeout(armT); armed = false; b.textContent = "Új játék";
+    newGame(); toast("Új játék indul."); if (dlg.close) dlg.close();
+  });
+
+  syncCat(); renderChips(); renderBoard(); renderBack(); render();
+})();
 </script>
+</body>
+</html>
