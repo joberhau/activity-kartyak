@@ -432,10 +432,26 @@
       3: "Ördögűző, Jurassic Park, A dzsungel könyve, Aranyhaj, Kung Fu Panda, Bambi, Dumbo, Pán Péter, Gandalf, Darth Vader, Jégkorszak, Agymanók, A kis hableány, Mulan, Ratatouille, Up, Wall-E, Szellemirtók, Hulk, Vasember, Amerika kapitány, Thor, Wonder Woman, Zorro, Robinson Crusoe, Don Quijote, Hamlet, Rómeó és Júlia, Toldi, Egri csillagok, A Pál utcai fiúk, Jancsi és Juliska, Mézga család, Frakk, Mazsola és Tádé, A kis herceg, Ejtőernyős ugrás, Bankrablás, Kincsvadászat, Szellemvadászat, Vámpírvadászat, Táncverseny, Árverés, Esküvői tánc, Meccs a lelátón, Titkosügynök, Kémfilm, Horrorfilm, Western, Szuperhős-film, Kalandfilm, Rajzfilm-hős, Gyilkos cápa, Fekete özvegy, Sárkányszelídítő, Roxfort, Cápa, Kisvakond"
     }
   };
+  // Összetett szavak: az egyszerű szó (Kerék, Óra, Ház) mellé a bonyolultabb párja
+  const EXTRA3 = {
+    draw: {
+      1: "Gumikacsa, Gumilabda, Madárház, Méhkas, Virágcserép, Virágcsokor, Karóra, Falióra, Homokóra, Kutyaház, Teáskanna, Borospohár, Tejeskancsó, Gyümölcskosár",
+      2: "Motorkerék, Autókerék, Biciklikerék, Szélkerék, Vízikerék, Kocsikerék, Függőhíd, Kőhíd, Napóra, Zsebóra, Kakukkos óra, Gumicsizma, Gumimatrac, Madáretető, Madárfészek, Tűzoltóállomás, Rendőrautó, Mentőhelikopter, Teherautó, Szemeteskocsi, Autómosó, Repülőgép, Vízimalom, Szökőkút, Fagylaltkehely, Kávéscsésze, Cukortartó, Kenyérkosár, Virágágyás, Fűnyírógép, Kerti locsoló, Napernyő, Függőágy, Lakókocsi, Hóekés kamion, Gumiabroncs, Kerékpárkosár, Hűtőszekrény, Mosogatógép, Porszívó, Villanyborotva, Fogkrém, Fogselyem, Zuhanyfüggöny",
+      3: "Motorcsónak, Vitorláskerék, Hegyi vasút, Fogaskerekű vasút, Légpárnás hajó, Jégtörő hajó, Tűzoltó helikopter, Űrsikló, Földgömb állvánnyal, Esőerdei folyó, Szélturbina, Homokóra a sivatagban, Kerékpáros a hegyen, Mentőhajó a viharban"
+    },
+    talk: {
+      2: "Motorkerékpár, Kerékpártúra, Fogaskerekű, Hegyimentő, Vasútállomás, Autómosó, Autószerviz, Gumiabroncs, Fékpedál, Biztonsági öv, Légzsák, Rendszámtábla, Forgalomirányító, Tűzoltóállomás, Rendőrautó, Mentőhelikopter, Teherautó, Szemeteskocsi, Karóra, Falióra, Homokóra, Kakukkos óra, Madáretető, Madárfészek, Virágcserép, Fűnyírógép, Mosogatógép, Porszívó, Villanyborotva, Fogkrém, Fogselyem, Függőágy, Lakókocsi, Szökőkút, Napernyő",
+      3: "Motorversenyző, Kerékcsere, Gumicsere, Műszaki vizsga, Műszaki hiba, Kerékpárlopás, Közlekedési baleset, Forgalmi dugó, Zöldhullám, Autóversenyző, Légiirányítás, Útlevélellenőrzés, Vámvizsgálat, Hegyimentő kutya, Tűzoltóbál, Családi nyaralás, Szomszédvár, Hétvégi házikó, Munkahelyi értekezlet, Iskolai ünnepély, Osztálytalálkozó"
+    },
+    mime: {
+      2: "Motorozás, Kerékcsere, Gumicsere, Autómosás, Szélvédőmosás, Fűnyírógép-indítás, Biliárdozás, Dartsozás, Pingpongozás, Fogkefézés, Virágcsokor-kötés, Madáretetés, Méhészkedés, Tűzoltótömlő-húzás, Kerékpárszerelés, Biciklilánc-javítás, Ablakmosás, Mosogatógép-bepakolás, Porszívózás, Fűnyírás, Locsolás",
+      3: "Motorversenyző, Rali pilóta, Hegymászó vezető, Tűzoltóbemutató, Mentőhelikopter pilóta, Légiirányító, Kerékpárlopás, Műszaki vizsga, Közlekedési baleset, Forgalomirányító rendőr, Autószerelő a motorháztető alatt"
+    }
+  };
   const CARDS = [];
   { const seen = new Set();
     for (const k of Object.keys(WORDS)) for (const lv of [1, 2, 3])
-      for (const w of (WORDS[k][lv] + "," + ((EXTRA[k] || {})[lv] || "") + "," + ((EXTRA2[k] || {})[lv] || "")).split(",").map((s) => s.trim()).filter(Boolean)) {
+      for (const w of (WORDS[k][lv] + "," + ((EXTRA[k] || {})[lv] || "") + "," + ((EXTRA2[k] || {})[lv] || "") + "," + ((EXTRA3[k] || {})[lv] || "")).split(",").map((s) => s.trim()).filter(Boolean)) {
         const id = k + ":" + w.toLowerCase();
         if (!seen.has(id)) { seen.add(id); CARDS.push({ id, k, word: w, lv }); }
       } }
