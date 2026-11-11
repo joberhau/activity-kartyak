@@ -182,6 +182,15 @@
   .seg button[aria-pressed="true"] { background: var(--gold); color: #2a1a00; border-color: transparent; }
   .names { display: grid; gap: 8px; }
   .names input { font: inherit; min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: rgba(0,0,0,.25); color: var(--ink); padding: 0 12px; width: 100%; user-select: text; -webkit-user-select: text; }
+  .txt { font: inherit; min-height: 46px; border-radius: 12px; border: 2px solid var(--line); background: rgba(0,0,0,.25); color: var(--ink); padding: 0 12px; width: 100%; user-select: text; -webkit-user-select: text; }
+  .addrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .addrow .small { padding: 0 16px; background: var(--gold); color: #2a1a00; border: 0; }
+  .note { min-height: 1.3em; font-size: .85rem; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: .9rem; padding: 6px 0; }
+  .clist { max-height: 190px; overflow: auto; display: grid; gap: 6px; margin-top: 6px; }
+  .clist div { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--glass); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: .9rem; }
+  .clist small { color: var(--muted); }
+  .clist button { width: 34px; height: 34px; border-radius: 8px; font-size: 1.1rem; background: rgba(255,255,255,.08); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .small { min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass); font-weight: 700; font-size: .9rem; }
   .done { min-height: 52px; border-radius: 16px; background: var(--gold); color: #2a1a00; font: 800 1.05rem/1 var(--display); }
@@ -286,6 +295,13 @@
     <div class="field"><span class="lab">Nehézség</span><div class="seg" id="segLevel"></div></div>
     <div class="field"><span class="lab">Tábla hossza</span><div class="seg" id="segBoard"></div></div>
     <div class="field"><span class="lab">Hang és rezgés</span><div class="seg" id="segSound"></div></div>
+    <div class="field"><span class="lab">Új szó felvétele</span>
+      <div class="seg" id="segNewCat"></div>
+      <div class="seg" id="segNewLv"></div>
+      <div class="addrow"><input class="txt" id="newWord" maxlength="40" placeholder="Szó vagy kifejezés" autocomplete="off" autocapitalize="sentences"><button class="small" id="addWord">Felvétel</button></div>
+      <div class="note" id="addMsg" aria-live="polite"></div>
+      <details><summary id="customSum">Saját szavak</summary><div class="clist" id="customList"></div></details>
+    </div>
     <div class="row2">
       <button class="small" id="resetDeck">Pakli újrakeverése</button>
       <button class="small" id="resetScores">Új játék</button>
@@ -367,7 +383,7 @@
 
   const TEAM_COLORS = ["#ffc83d", "#35d0ff", "#c77dff", "#a3e635"];
   const KEY = "activity-kartyak-v2";
-  const S = { teamCount: 2, names: ["A csapat", "B csapat", "C csapat", "D csapat"], scores: [0, 0, 0, 0], time: 60, boardLen: 48, mode: "board", turn: 0, started: false, level: "mix", sound: true,
+  const S = { teamCount: 2, names: ["A csapat", "B csapat", "C csapat", "D csapat"], scores: [0, 0, 0, 0], time: 60, boardLen: 48, mode: "board", turn: 0, started: false, custom: [], level: "mix", sound: true,
     active: { draw: true, talk: false, mime: false }, seen: [] };
   try {
     const x = JSON.parse(localStorage.getItem(KEY) || "null");
@@ -380,12 +396,14 @@
       if (x.mode === "free" || x.mode === "board") S.mode = x.mode;
       if (Number.isInteger(x.turn) && x.turn >= 0 && x.turn < S.teamCount) S.turn = x.turn;
       if (typeof x.started === "boolean") S.started = x.started;
+      if (Array.isArray(x.custom)) S.custom = x.custom.filter((c) => c && CATS[c.k] && [1, 2, 3].includes(c.lv) && typeof c.word === "string" && c.word.trim() && c.word.length <= 40);
       if (["easy", "mix", "hard"].includes(x.level)) S.level = x.level;
       if (typeof x.sound === "boolean") S.sound = x.sound;
       if (Array.isArray(x.seen)) S.seen = x.seen.filter((s) => typeof s === "string");
     }
   } catch (e) {}
   const seen = new Set(S.seen);
+  for (const c of S.custom) { const id = c.k + ":" + c.word.toLowerCase(); if (!CARDS.some((x) => x.id === id)) CARDS.push({ id, k: c.k, word: c.word, lv: c.lv, custom: true }); }
   function save() { try { S.seen = [...seen]; localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
   let cur = null, phase = "idle", timeLeft = S.time, endAt = 0, tid = null, lastSecs = -1, stealing = false;
@@ -846,6 +864,9 @@
     seg("segTime", [[30, "30 mp"], [60, "60 mp"], [90, "90 mp"]], () => S.time, (v) => { S.time = v; if (phase === "idle" || phase === "down") { timeLeft = v; renderTimer(); } });
     seg("segLevel", [["easy", "Könnyebb"], ["mix", "Vegyes"], ["hard", "Nehezebb"]], () => S.level, (v) => { S.level = v; renderLeft(); });
     seg("segBoard", [[24, "Rövid (24)"], [48, "Eredeti (48)"]], () => S.boardLen, (v) => { S.boardLen = v; syncCat(); renderChips(); renderBoard(); renderBack(); });
+    seg("segNewCat", [["draw", "Rajzolás"], ["talk", "Körülírás"], ["mime", "Mutogatás"]], () => newCat, (v) => { newCat = v; });
+    seg("segNewLv", [[1, PTS[1] + " pont"], [2, PTS[2] + " pont"], [3, PTS[3] + " pont"]], () => newLv, (v) => { newLv = v; });
+    renderCustom();
     seg("segSound", [[true, "Be"], [false, "Ki"]], () => S.sound, (v) => { S.sound = v; });
     renderNames();
   }
@@ -858,6 +879,37 @@
       w.appendChild(inp);
     }
   }
+  /* Saját szavak */
+  let newCat = "draw", newLv = 1;
+  function renderCustom() {
+    const list = $("customList"); list.textContent = "";
+    $("customSum").textContent = "Saját szavak (" + S.custom.length + ")";
+    S.custom.forEach((c, idx) => {
+      const row = document.createElement("div"), t = document.createElement("span"), sm = document.createElement("small"), del = document.createElement("button");
+      t.textContent = c.word; sm.textContent = " " + CATS[c.k].name + ", " + PTS[c.lv] + " pont"; t.appendChild(sm);
+      del.textContent = "×"; del.setAttribute("aria-label", c.word + " törlése");
+      del.addEventListener("click", () => {
+        const id = c.k + ":" + c.word.toLowerCase(), i = CARDS.findIndex((x) => x.id === id && x.custom);
+        if (i >= 0) CARDS.splice(i, 1);
+        seen.delete(id); S.custom.splice(idx, 1); save(); renderLeft(); renderCustom();
+      });
+      row.append(t, del); list.appendChild(row);
+    });
+  }
+  function addWord() {
+    const msg = $("addMsg"), inp = $("newWord"), w = inp.value.trim().replace(/\s+/g, " ");
+    if (!w) { msg.textContent = "Írj be egy szót."; return; }
+    const id = newCat + ":" + w.toLowerCase(), ex = CARDS.find((c) => c.id === id);
+    if (ex) { msg.textContent = "Ez már megvan: " + ex.word + " (" + CATS[ex.k].name + ", " + PTS[ex.lv] + " pont). Nem vettem fel."; return; }
+    const other = CARDS.find((c) => c.k !== newCat && c.word.toLowerCase() === w.toLowerCase());
+    CARDS.push({ id, k: newCat, word: w, lv: newLv, custom: true }); S.custom.push({ k: newCat, word: w, lv: newLv }); save();
+    inp.value = ""; renderLeft(); renderCustom();
+    msg.textContent = "Felvettem: " + w + " (" + CATS[newCat].name + ", " + PTS[newLv] + " pont)." + (other ? " Megjegyzés: " + CATS[other.k].name + " között is szerepel." : "");
+    inp.focus();
+  }
+  $("addWord").addEventListener("click", addWord);
+  $("newWord").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addWord(); } });
+
   const dlg = $("settings");
   $("gear").addEventListener("click", () => { renderSettings(); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); });
   $("board").addEventListener("click", () => $("gear").click());
